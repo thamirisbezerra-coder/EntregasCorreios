@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Logística</title>
+    <title>Painel de Logística 2025</title>
     
-    <!-- Tailwind CSS para Estilos -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Fonte Inter -->
@@ -16,6 +16,33 @@
         .animate-in { animation: fadeIn 0.5s ease-out; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Estilos Sazonais para os Botões de Mês */
+        .season-summer { 
+            background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); 
+            border-left: 4px solid #f97316; 
+            color: #9a3412;
+        }
+        .season-autumn { 
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); 
+            border-left: 4px solid #ef4444; 
+            color: #991b1b;
+        }
+        .season-winter { 
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); 
+            border-left: 4px solid #3b82f6; 
+            color: #1e40af;
+        }
+        .season-spring { 
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); 
+            border-left: 4px solid #22c55e; 
+            color: #166534;
+        }
+        
+        /* Efeito de Hover e Ativo */
+        .season-btn { position: relative; overflow: hidden; transition: all 0.2s ease; }
+        .season-btn:hover { transform: translateX(2px); }
+        .season-btn-active { transform: scale(1.02) translateX(4px); box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.1); font-weight: 700; z-index: 10; }
     </style>
 
     <!-- Import Map -->
@@ -25,7 +52,10 @@
         "react": "https://esm.sh/react@18.2.0",
         "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
         "recharts": "https://esm.sh/recharts?deps=react@18.2.0,react-dom@18.2.0",
-        "lucide-react": "https://esm.sh/lucide-react?deps=react@18.2.0"
+        "lucide-react": "https://esm.sh/lucide-react?deps=react@18.2.0",
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+        "firebase/analytics": "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"
       }
     }
     </script>
@@ -39,78 +69,192 @@
     <script type="text/babel" data-type="module">
         import React, { useState, useMemo, useEffect } from 'react';
         import ReactDOM from 'react-dom/client';
+        import { initializeApp } from "firebase/app";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "firebase/firestore";
         import { 
           BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, 
           PieChart, Pie, Cell 
         } from 'recharts';
         import { 
-          Upload, Package, Search, Truck, Users, 
-          FileText, LayoutDashboard, AlertCircle, Download, X, ArrowUpRight, CheckCircle2,
-          Filter, Calendar as CalendarIcon, MapPin, UserCheck, Search as SearchIcon, AlertTriangle,
-          Menu, Plus, Save, Edit3, Clock, MoreHorizontal, User
+          Package, Search, Truck, Users, 
+          FileText, LayoutDashboard, AlertCircle, Download, X, CheckCircle2,
+          Calendar as CalendarIcon, UserCheck, Search as SearchIcon, AlertTriangle,
+          Menu, Plus, Save, Edit3, Clock, CalendarDays, ChevronDown, History, ClipboardList, FileSpreadsheet,
+          Sun, CloudRain, Snowflake, Leaf, CloudLightning, Umbrella
         } from 'lucide-react';
 
-        // --- Cores e Estilos ---
+        // --- Configuração Firebase ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyASMPEJRmb6gIGKZZ80vMcUwPBW-T-HSyc",
+          authDomain: "entregascorreios-4696c.firebaseapp.com",
+          projectId: "entregascorreios-4696c",
+          storageBucket: "entregascorreios-4696c.firebasestorage.app",
+          messagingSenderId: "57805415230",
+          appId: "1:57805415230:web:4fa0934a922466d922026f",
+          measurementId: "G-J2V5Z36B1Z"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
         const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#6366f1', '#ec4899'];
 
-        // --- Dados Iniciais (Limpos para refletir dados históricos sem 'quemEntregou') ---
+        // --- Dados de Referência (Todos os Meses) ---
         const INITIAL_DATA = [
-          { data: '07/11/2025', remetente: 'RAMP EQUIPAMENTOS', transportadora: 'SEDEX', doc: 'AB666959085BR', entreguePara: 'Éder', quemEntregou: '', setor: 'P&D CARNEOS', obs: 'Entregue sem a/c p/ Éder' },
-          { data: '07/11/2025', remetente: 'INTERLINK', transportadora: 'PROPRIA', doc: '-', entreguePara: 'JÉSSICA SOUZA', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
-          { data: '07/11/2025', remetente: 'ERIC', transportadora: 'FEDEX', doc: '885638572482', entreguePara: 'MICHELLE MORAIS', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
-          { data: '07/11/2025', remetente: 'BRG SUPLEMENTOS', transportadora: 'SEDEX', doc: 'ab666358347br', entreguePara: '-', quemEntregou: '', setor: 'LABORATÓRIO', obs: '' },
-          { data: '07/11/2025', remetente: 'INOV3 SOLUÇÕES', transportadora: 'SEDEX', doc: 'oy484899621br', entreguePara: 'Mateus Fernandez', quemEntregou: '', setor: 'LABORATÓRIO', obs: 'Entregue Para Mateus Fernandez!' },
-          { data: '07/11/2025', remetente: 'MM LABORATÓRIO', transportadora: 'PAC', doc: 'an158493911br', entreguePara: '-', quemEntregou: '', setor: 'SEL', obs: '' },
-          { data: '02/01/2025', remetente: 'LUISA', transportadora: 'MOTOBOY', doc: '-', entreguePara: 'Paulo cunha', quemEntregou: '', setor: 'P&D', obs: 'Entregue em mãos!' },
-          { data: '01/10/2025', remetente: 'HUBEI XINGFA', transportadora: 'DHL', doc: '284910293', entreguePara: 'MARCELO PRAIA', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
+          // Janeiro
+          { data: '02/01/2025', remetente: 'LUISA', transportadora: '****', doc: '1001815000', entreguePara: 'Paulo cunha', quemEntregou: '', setor: 'P&D', obs: 'Entregue em mãos!' },
+          { data: '03/01/2025', remetente: 'HENRIPRINT GRAFICA', transportadora: 'SEDEX', doc: 'AA812420554BR', entreguePara: 'Jhonatas Silva', quemEntregou: '', setor: 'COMPRAS', obs: 'Deixado em sua mesa!' },
+          // Fevereiro
+          { data: '03/02/2025', remetente: 'MAIS MU', transportadora: '****', doc: '****', entreguePara: 'Aline Emerenciano', quemEntregou: '', setor: 'SEL', obs: '' },
+          { data: '20/02/2025', remetente: 'CONECT JOINVILLE', transportadora: '****', doc: 'LG3CONJBW', entreguePara: 'Fabio', quemEntregou: '', setor: 'TI', obs: '' },
+          // Março
+          { data: '05/03/2025', remetente: 'ORIGIN', transportadora: 'FEDEX', doc: '285780863096', entreguePara: 'Priscila Zaccardelli', quemEntregou: '', setor: 'COMPRAS', obs: '' },
+          { data: '21/03/2025', remetente: 'CARLOS VINICIUS', transportadora: 'PAC', doc: 'QN191350474BR', entreguePara: 'Gustavo Bonfim', quemEntregou: '', setor: 'GERENTE', obs: 'Deixado em sua mesa!' },
+          // Abril
+          { data: '01/04/2025', remetente: 'CARLOS SARMIENTO', transportadora: 'DHL', doc: '4938879013', entreguePara: 'Maria Bernardes', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue para Maria!' },
+          { data: '28/04/2025', remetente: 'WORLEE', transportadora: 'SEDEX', doc: 'AC505861907BR', entreguePara: 'Jhonatas Silva', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos' },
+          // Maio
+          { data: '05/05/2025', remetente: 'COLOR ANDINA FOODS', transportadora: 'SEDEX', doc: 'AC534888354BR', entreguePara: 'Priscila', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
+          { data: '30/05/2025', remetente: 'SANSIRIL', transportadora: 'SEDEX', doc: 'OY471896051BR', entreguePara: 'Priscila Zaccardelli', quemEntregou: '', setor: 'COMPRAS', obs: 'Deixado na sua mesa!' },
+          // Junho
+          { data: '02/06/2025', remetente: 'DOHLER AMERICA', transportadora: 'SEDEX', doc: 'AC664235915BR', entreguePara: 'Michelle Silva', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
+          { data: '30/06/2025', remetente: 'BIOGHEN NUTRITION', transportadora: '*', doc: '*', entreguePara: 'Mateus Fernandes', quemEntregou: '', setor: 'LABORATORIO', obs: 'Sem a/c entregue p/ Mateus' },
+          // Julho
+          { data: '01/07/2025', remetente: 'ZHANGYU', transportadora: 'FEDEX', doc: '*', entreguePara: 'Jessica Souza', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
+          { data: '30/07/2025', remetente: 'CAFFEINE ARMY', transportadora: '*', doc: '*', entreguePara: 'Mateus Fernandes', quemEntregou: '', setor: 'LABORATORIO', obs: 'Sem a/c entregue para Mateus F.!' },
+          // Agosto
+          { data: '01/08/2025', remetente: 'DUX COMPANY', transportadora: '*', doc: '*', entreguePara: 'Amanda', quemEntregou: '', setor: 'LABORATÓRIO', obs: 'Sem a/c entregue para Amanda!' },
+          { data: '27/08/2025', remetente: 'UNILIFE', transportadora: 'SEDEX', doc: 'AC982808065BR', entreguePara: 'Sidney Rodrigues', quemEntregou: '', setor: 'LABORATORIO', obs: 'Entregue p/ Mateus' },
+          // Setembro
+          { data: '01/09/2025', remetente: 'NOVAPROM', transportadora: 'SEDEX', doc: 'OY585202177BR', entreguePara: 'MICHELLE SILVA', quemEntregou: '', setor: 'COMPRAS', obs: 'entregue em mãos!' },
+          { data: '26/09/2025', remetente: 'LBN IND', transportadora: 'SEDEX', doc: 'AB539657281BR', entreguePara: 'FABIANA', quemEntregou: '', setor: 'REFEITÓRIO', obs: '' },
+          // Outubro
+          { data: '01/10/2025', remetente: 'HUBEI XINGFA', transportadora: 'DHL', doc: '-', entreguePara: 'MARCELO PRAIA', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
+          { data: '29/10/2025', remetente: 'FHOM ALIMENTOS', transportadora: 'SEDEX', doc: 'AB640664035BR', entreguePara: 'ANA MOTA', quemEntregou: '', setor: 'VENDAS', obs: 'Entregue em mãos!' },
+          // Novembro
+          { data: '03/11/2025', remetente: 'RENATA AMARAL', transportadora: '-', doc: '-', entreguePara: 'NATHALIA MEDEIROS', quemEntregou: '', setor: 'MANUTENÇÃO', obs: 'Entregue em mãos!' },
+          { data: '25/11/2025', remetente: 'DAY HOME COMERCIAL', transportadora: 'SEDEX', doc: 'AB718330752BR', entreguePara: '-', quemEntregou: '', setor: 'REFEITÓRIO', obs: 'Regiane retirou' },
+          // Dezembro (Vazio por enquanto, mas estrutura pronta)
+        ];
+
+        // --- Configuração dos Meses e Estações ---
+        const MONTHS_CONFIG = [
+            { id: '01', name: 'Janeiro', season: 'summer', icon: Sun, color: 'orange' },
+            { id: '02', name: 'Fevereiro', season: 'summer', icon: Sun, color: 'orange' },
+            { id: '03', name: 'Março', season: 'autumn', icon: Leaf, color: 'red' },
+            { id: '04', name: 'Abril', season: 'autumn', icon: Leaf, color: 'red' },
+            { id: '05', name: 'Maio', season: 'autumn', icon: Leaf, color: 'red' },
+            { id: '06', name: 'Junho', season: 'winter', icon: Snowflake, color: 'blue' },
+            { id: '07', name: 'Julho', season: 'winter', icon: Snowflake, color: 'blue' },
+            { id: '08', name: 'Agosto', season: 'winter', icon: Snowflake, color: 'blue' },
+            { id: '09', name: 'Setembro', season: 'spring', icon: CloudRain, color: 'green' },
+            { id: '10', name: 'Outubro', season: 'spring', icon: Umbrella, color: 'green' }, // Chuva em outubro (exemplo)
+            { id: '11', name: 'Novembro', season: 'spring', icon: CloudLightning, color: 'green' }, // Chuva e raios em novembro
+            { id: '12', name: 'Dezembro', season: 'summer', icon: Sun, color: 'orange' },
         ];
 
         function App() {
           const [deliveries, setDeliveries] = useState(INITIAL_DATA);
           const [searchTerm, setSearchTerm] = useState('');
-          const [activeTab, setActiveTab] = useState('list');
+          const [activeTab, setActiveTab] = useState('list'); 
           const [dragActive, setDragActive] = useState(false);
           const [uploadStats, setUploadStats] = useState({ count: 0, show: false });
           const [quickFilter, setQuickFilter] = useState('ALL');
-          const [monthFilter, setMonthFilter] = useState('ALL');
           
-          // UI States
+          // Seleção de Mês Automática
+          const currentMonthIndex = new Date().getMonth(); // 0-11
+          const currentMonthId = String(currentMonthIndex + 1).padStart(2, '0');
+          const [selectedMonth, setSelectedMonth] = useState(currentMonthId); 
+
+          // Gestão de Ano
+          const [currentYear, setCurrentYear] = useState(2025);
+          const [viewYear, setViewYear] = useState(2025);
+          const [showNewYearModal, setShowNewYearModal] = useState(false);
+          
+          // UI Modals
           const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-          const [isModalOpen, setIsModalOpen] = useState(false);
+          const [isModalOpen, setIsModalOpen] = useState(false); 
+          const [isImportModalOpen, setIsImportModalOpen] = useState(false); 
           const [editingIndex, setEditingIndex] = useState(null);
           
+          // Formulários
           const [newDeliveryForm, setNewDeliveryForm] = useState({
-            data: new Date().toLocaleDateString('pt-BR'),
-            remetente: '',
-            transportadora: '',
-            doc: '',
-            entreguePara: '',
-            quemEntregou: '',
-            setor: '',
-            obs: ''
+            data: '', remetente: '', transportadora: '', doc: '', entreguePara: '', quemEntregou: '', setor: '', obs: ''
           });
 
-          // --- Parser CSV ---
-          const parseCSV = (text) => {
+          const [importForm, setImportForm] = useState({
+            month: currentMonthId,
+            textData: ''
+          });
+
+          // Carregar dados (Simulação Firebase)
+          useEffect(() => {
+            const fetchData = async () => {
+              try {
+                const q = query(collection(db, "entregas"), orderBy("data", "desc"));
+                const querySnapshot = await getDocs(q);
+                const loadedData = [];
+                querySnapshot.forEach((doc) => {
+                  loadedData.push({ id: doc.id, ...doc.data() });
+                });
+                if (loadedData.length > 0) {
+                  setDeliveries(loadedData);
+                }
+              } catch (e) {
+                // console.log("Erro ao buscar:", e);
+              }
+            };
+            fetchData();
+          }, []);
+
+          // --- Helpers ---
+          const parseDateYear = (dateStr) => {
+             if (!dateStr) return 0;
+             if (dateStr.includes('/')) return parseInt(dateStr.split('/')[2]);
+             if (dateStr.includes('-')) return parseInt(dateStr.split('-')[0]);
+             return 0;
+          };
+
+          const getSectorStyle = (sector) => {
+            if (!sector) return 'text-slate-500 bg-slate-100';
+            const s = sector.toUpperCase();
+            if (s.includes('LAB')) return 'text-teal-600 bg-teal-50';
+            if (s.includes('COMPRAS') || s.includes('ADM')) return 'text-indigo-600 bg-indigo-50';
+            if (s.includes('P&D')) return 'text-rose-600 bg-rose-50';
+            if (s.includes('MANUT')) return 'text-orange-600 bg-orange-50';
+            if (s.includes('VENDAS')) return 'text-emerald-600 bg-emerald-50';
+            return 'text-slate-500 bg-slate-100';
+          };
+
+          // --- Parser Inteligente ---
+          const parsePastedText = (text) => {
             const lines = text.split('\n');
             const newDeliveries = [];
             lines.forEach(line => {
               const cleanLine = line.trim();
               if (!cleanLine) return;
               if (cleanLine.match(/^\d{2} DE [A-ZÇ]+ \([A-Z]+\)/i)) return;
-              if (cleanLine.toLowerCase().startsWith('entrega,nome')) return;
-              const columns = cleanLine.split(',');
-              if (columns[0] && columns[0].match(/\d{2}\/\d{2}\/\d{4}/)) {
+              if (cleanLine.toLowerCase().startsWith('entrega')) return;
+
+              let columns = cleanLine.includes('\t') ? cleanLine.split('\t') : cleanLine.split(',');
+              
+              if (columns[0] && (columns[0].match(/\d{4}-\d{1,2}-\d{1,2}/) || columns[0].match(/\d{1,2}\/\d{1,2}\/\d{2,4}/))) {
+                let dateStr = columns[0].trim();
+                if (dateStr.includes('-')) {
+                    const [year, month, day] = dateStr.split('-');
+                    dateStr = `${day}/${month}/${year}`;
+                }
                 const cleanSetor = (columns[5]?.trim().toUpperCase() || 'GERAL').replace(/[.,]/g, '').replace(/\s+/g, ' '); 
                 let cleanTransp = columns[2]?.trim().replace(/\*/g, '').replace('****', '') || 'NÃO INF.';
                 if (cleanTransp.length < 2) cleanTransp = 'NÃO INF.';
+
                 newDeliveries.push({
-                  data: columns[0]?.trim(),
+                  data: dateStr,
                   remetente: columns[1]?.trim().toUpperCase(),
                   transportadora: cleanTransp,
                   doc: columns[3]?.trim(),
                   entreguePara: columns[4]?.trim() || '-',
-                  quemEntregou: '', // Padrão vazio para CSVs antigos
+                  quemEntregou: '', 
                   setor: cleanSetor,
                   obs: columns.slice(6).join(' ').trim().replace(/"/g, '')
                 });
@@ -119,65 +263,24 @@
             return newDeliveries;
           };
 
-          const handleFileUpload = (e) => {
-            const files = Array.from(e.target.files || e.dataTransfer.files);
-            let totalNew = 0;
-            const promises = files.map(file => new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (event) => resolve(parseCSV(event.target.result));
-                reader.readAsText(file);
-              }));
-            Promise.all(promises).then(results => {
-              const allNewData = results.flat();
-              setDeliveries(prev => {
-                const prevString = new Set(prev.map(d => JSON.stringify(d)));
-                const uniqueNew = allNewData.filter(d => !prevString.has(JSON.stringify(d)));
-                totalNew = uniqueNew.length;
-                return [...prev, ...uniqueNew];
-              });
-              if (totalNew > 0) {
-                setUploadStats({ count: totalNew, show: true });
-                setTimeout(() => setUploadStats(prev => ({...prev, show: false})), 5000);
+          // --- Handlers ---
+          const handleProcessImport = async () => {
+              if (!importForm.textData) return;
+              const parsedData = parsePastedText(importForm.textData);
+              if (parsedData.length === 0) {
+                  alert("Nenhum dado válido encontrado.");
+                  return;
               }
-            });
+              setDeliveries(prev => {
+                  const prevString = new Set(prev.map(d => JSON.stringify({d: d.data, r: d.remetente, doc: d.doc})));
+                  const uniqueNew = parsedData.filter(d => !prevString.has(JSON.stringify({d: d.data, r: d.remetente, doc: d.doc})));
+                  return [...prev, ...uniqueNew];
+              });
+              setImportForm({ ...importForm, textData: '' });
+              alert(`${parsedData.length} registros importados!`);
           };
 
-          const handleDrag = (e) => { e.preventDefault(); e.stopPropagation(); if (e.type === "dragenter" || e.type === "dragover") setDragActive(true); else if (e.type === "dragleave") setDragActive(false); };
-          const handleDrop = (e) => { e.preventDefault(); e.stopPropagation(); setDragActive(false); if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFileUpload(e); };
-
-          // --- CRUD Entregas ---
-          const handleOpenNew = () => {
-            setEditingIndex(null);
-            setNewDeliveryForm({
-              data: new Date().toLocaleDateString('pt-BR'),
-              remetente: '',
-              transportadora: '',
-              doc: '',
-              entreguePara: '',
-              quemEntregou: '',
-              setor: '',
-              obs: ''
-            });
-            setIsModalOpen(true);
-          };
-
-          const handleOpenEdit = (item, index) => {
-            const realIndex = deliveries.findIndex(d => d === item);
-            setEditingIndex(realIndex);
-            setNewDeliveryForm({
-              data: item.data,
-              remetente: item.remetente,
-              transportadora: item.transportadora,
-              doc: item.doc,
-              entreguePara: item.entreguePara === '-' ? '' : item.entreguePara,
-              quemEntregou: item.quemEntregou === '-' ? '' : item.quemEntregou,
-              setor: item.setor,
-              obs: item.obs
-            });
-            setIsModalOpen(true);
-          };
-
-          const handleSaveDelivery = (e) => {
+          const handleSaveDelivery = async (e) => {
             e.preventDefault();
             const newEntry = {
               ...newDeliveryForm,
@@ -186,7 +289,8 @@
               setor: newDeliveryForm.setor.toUpperCase() || 'GERAL',
               doc: newDeliveryForm.doc || '-',
               entreguePara: newDeliveryForm.entreguePara || '-',
-              quemEntregou: newDeliveryForm.quemEntregou || ''
+              quemEntregou: newDeliveryForm.quemEntregou || '',
+              createdAt: new Date().toISOString()
             };
 
             if (editingIndex !== null) {
@@ -197,44 +301,76 @@
               });
             } else {
               setDeliveries(prev => [newEntry, ...prev]);
+              try { await addDoc(collection(db, "entregas"), newEntry); } catch (e) {}
             }
-            
             setIsModalOpen(false);
           };
 
-          // --- Estilos ---
-          const getCarrierStyle = (carrier) => {
-            const c = carrier.toUpperCase();
-            if (c.includes('SEDEX') || c.includes('CORREIOS')) return 'text-yellow-600 bg-yellow-50 border-yellow-100';
-            if (c.includes('FEDEX')) return 'text-purple-600 bg-purple-50 border-purple-100';
-            if (c.includes('DHL')) return 'text-red-600 bg-red-50 border-red-100';
-            return 'text-slate-500 bg-slate-50 border-slate-100';
-          };
-          
-          const getSectorStyle = (sector) => {
-            const s = sector.toUpperCase();
-            if (s.includes('LAB')) return 'text-teal-600 bg-teal-50';
-            if (s.includes('COMPRAS') || s.includes('ADM')) return 'text-indigo-600 bg-indigo-50';
-            if (s.includes('P&D')) return 'text-rose-600 bg-rose-50';
-            return 'text-slate-500 bg-slate-100';
+          // --- UI Helpers ---
+          const handleOpenNew = () => {
+            setEditingIndex(null);
+            setNewDeliveryForm({
+              data: new Date().toLocaleDateString('pt-BR'),
+              remetente: '', transportadora: '', doc: '', entreguePara: '', quemEntregou: '', setor: '', obs: ''
+            });
+            setIsModalOpen(true);
           };
 
-          const getObsAlert = (obs) => {
-            if (!obs) return null;
-            const lowerObs = obs.toLowerCase();
-            if (lowerObs.includes('sem a/c') || lowerObs.includes('entregue para') || lowerObs.includes('retirou') || lowerObs.includes('deixado em')) return 'alert';
-            return 'normal';
+          const handleOpenEdit = (item) => {
+            const realIndex = deliveries.indexOf(item);
+            setEditingIndex(realIndex);
+            setNewDeliveryForm({ ...item });
+            setIsModalOpen(true);
           };
 
-          // --- Cálculos & Filtros ---
+          const handleStartNewYear = () => {
+             const nextYear = currentYear + 1;
+             setCurrentYear(nextYear);
+             setViewYear(nextYear);
+             setShowNewYearModal(false);
+          };
+
+          // Filtros
+          const filteredDeliveries = useMemo(() => {
+            let data = deliveries.filter(d => parseDateYear(d.data) === viewYear);
+            
+            if (activeTab === 'list') {
+                data = data.filter(d => { 
+                    if(!d.data) return false; 
+                    return d.data.split('/')[1] === selectedMonth; 
+                });
+            }
+
+            if (quickFilter !== 'ALL') {
+              data = data.filter(d => {
+                if (quickFilter === 'LAB') return d.setor.includes('LAB');
+                if (quickFilter === 'COMPRAS') return d.setor.includes('COMPRAS') || d.setor.includes('ADM');
+                return true;
+              });
+            }
+            
+            if (searchTerm) {
+              const lowerSearch = searchTerm.toLowerCase();
+              data = data.filter(d => Object.values(d).some(val => String(val).toLowerCase().includes(lowerSearch)));
+            }
+            
+            return data.sort((a, b) => {
+                const da = a.data.split('/').reverse().join('');
+                const db = b.data.split('/').reverse().join('');
+                return db.localeCompare(da);
+            });
+          }, [deliveries, searchTerm, quickFilter, selectedMonth, viewYear, activeTab]);
+
           const stats = useMemo(() => {
-            const total = deliveries.length;
+            // Estatisticas usam dados do ANO TODO
+            let dataYear = deliveries.filter(d => parseDateYear(d.data) === viewYear);
+            const total = dataYear.length;
             const sectorCount = {};
             const carrierCount = {};
             const monthCount = {};
             const monthMap = { '01': 'Jan', '02': 'Fev', '03': 'Mar', '04': 'Abr', '05': 'Mai', '06': 'Jun', '07': 'Jul', '08': 'Ago', '09': 'Set', '10': 'Out', '11': 'Nov', '12': 'Dez' };
 
-            deliveries.forEach(d => {
+            dataYear.forEach(d => {
               let s = d.setor || 'OUTROS';
               if (s.includes('LAB')) s = 'LABORATÓRIO';
               sectorCount[s] = (sectorCount[s] || 0) + 1;
@@ -244,12 +380,9 @@
               if (t.includes('FEDEX')) t = 'FEDEX';
               carrierCount[t] = (carrierCount[t] || 0) + 1;
               if(d.data) {
-                const parts = d.data.split('/');
-                if(parts.length >= 2) {
-                  const m = parts[1];
-                  const label = monthMap[m] || m;
-                  monthCount[label] = (monthCount[label] || 0) + 1;
-                }
+                const m = d.data.split('/')[1];
+                const label = monthMap[m] || m;
+                monthCount[label] = (monthCount[label] || 0) + 1;
               }
             });
 
@@ -260,75 +393,40 @@
             const availableMonths = Object.keys(monthCount).sort((a,b) => monthOrder.indexOf(a) - monthOrder.indexOf(b));
 
             return { total, topSectors, topCarriers, chartData, availableMonths };
-          }, [deliveries]);
+          }, [deliveries, viewYear]);
 
-          const filteredDeliveries = useMemo(() => {
-            let data = deliveries;
-            const monthMapReverse = { 'Jan':'01', 'Fev':'02', 'Mar':'03', 'Abr':'04', 'Mai':'05', 'Jun':'06', 'Jul':'07', 'Ago':'08', 'Set':'09', 'Out':'10', 'Nov':'11', 'Dez':'12' };
+          const availableYears = useMemo(() => {
+             const years = new Set([currentYear]);
+             deliveries.forEach(d => { const y = parseDateYear(d.data); if (y > 2000) years.add(y); });
+             return Array.from(years).sort((a,b) => b-a);
+          }, [deliveries, currentYear]);
 
-            if (monthFilter !== 'ALL') {
-              const targetMonth = monthMapReverse[monthFilter];
-              data = data.filter(d => {
-                if(!d.data) return false;
-                const parts = d.data.split('/');
-                return parts[1] === targetMonth;
-              });
-            }
-
-            if (quickFilter !== 'ALL') {
-              data = data.filter(d => {
-                if (quickFilter === 'LAB') return d.setor.includes('LAB');
-                if (quickFilter === 'COMPRAS') return d.setor.includes('COMPRAS') || d.setor.includes('ADM');
-                if (quickFilter === 'PD') return d.setor.includes('P&D');
-                return true;
-              });
-            }
-
-            const lowerSearch = searchTerm.toLowerCase();
-            if (lowerSearch) {
-              data = data.filter(d => Object.values(d).some(val => String(val).toLowerCase().includes(lowerSearch)));
-            }
-            
-            return data.sort((a, b) => {
-                const da = a.data.split('/').reverse().join('');
-                const db = b.data.split('/').reverse().join('');
-                return db.localeCompare(da);
-            });
-          }, [deliveries, searchTerm, quickFilter, monthFilter]);
+          // UI Components
+          const getCarrierStyle = (c) => {
+            if (!c) return '';
+            c = c.toUpperCase();
+            if (c.includes('SEDEX')) return 'text-yellow-600 bg-yellow-50 border-yellow-100';
+            if (c.includes('FEDEX')) return 'text-purple-600 bg-purple-50 border-purple-100';
+            if (c.includes('DHL')) return 'text-red-600 bg-red-50 border-red-100';
+            return 'text-slate-500 bg-slate-50 border-slate-100';
+          };
+          const getObsAlert = (obs) => obs && (obs.toLowerCase().includes('sem a/c') || obs.toLowerCase().includes('retirou')) ? 'alert' : 'normal';
 
           const StatCard = ({ icon: Icon, label, value, subtext, color = "blue", insight = false }) => (
             <div className={`relative overflow-hidden p-6 rounded-xl border shadow-sm transition-all duration-200 ${insight ? 'bg-gradient-to-br from-indigo-600 to-violet-700 text-white border-transparent' : 'bg-white border-slate-200 hover:shadow-md'}`}>
               {!insight ? (
                 <>
-                  <div className={`absolute -right-4 -top-4 opacity-[0.12] text-${color}-600 pointer-events-none`}>
-                     <Icon size={100} strokeWidth={1.5} />
-                  </div>
-
+                  <div className={`absolute -right-4 -top-4 opacity-[0.08] text-${color}-600 pointer-events-none`}><Icon size={100} strokeWidth={1.5} /></div>
                   <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-[10px] font-bold text-${color}-600 bg-${color}-50 px-2 py-0.5 rounded uppercase tracking-wider border border-${color}-100`}>
-                            {label}
-                        </span>
-                    </div>
-                    
-                    <h3 className="text-3xl font-bold text-slate-800 truncate tracking-tight" title={String(value)}>
-                        {value}
-                    </h3>
-                    
-                    <p className="text-xs text-slate-500 mt-2 font-medium flex items-center gap-1">
-                       {subtext}
-                    </p>
+                    <div className="flex items-center gap-2 mb-1"><span className={`text-[10px] font-bold text-${color}-600 bg-${color}-50 px-2 py-0.5 rounded uppercase tracking-wider border border-${color}-100`}>{label}</span></div>
+                    <h3 className="text-3xl font-bold text-slate-800 truncate tracking-tight" title={String(value)}>{value}</h3>
+                    <p className="text-xs text-slate-500 mt-2 font-medium flex items-center gap-1">{subtext}</p>
                   </div>
                 </>
               ) : (
                 <div className="relative z-10 flex flex-col justify-center h-full">
-                    <div className="flex items-center gap-2 mb-2">
-                        <AlertCircle className="text-yellow-300 h-4 w-4" />
-                        <span className="text-[10px] font-bold text-indigo-100 uppercase tracking-wide">Insight</span>
-                    </div>
-                    <p className="text-sm leading-snug font-medium">
-                      O setor <strong className="text-white border-b border-indigo-400 pb-0.5">{value}</strong> é o maior recebedor ({subtext}).
-                    </p>
+                    <div className="flex items-center gap-2 mb-2"><AlertCircle className="text-yellow-300 h-4 w-4" /><span className="text-[10px] font-bold text-indigo-100 uppercase tracking-wide">Insight</span></div>
+                    <p className="text-sm leading-snug font-medium">O setor <strong className="text-white border-b border-indigo-400 pb-0.5">{value}</strong> é o maior recebedor.</p>
                 </div>
               )}
             </div>
@@ -336,226 +434,176 @@
 
           return (
             <div className="flex h-screen bg-slate-50 text-slate-800 font-sans overflow-hidden relative">
-              
-              <div 
-                className={`fixed z-40 h-full bg-slate-900 text-white shadow-2xl transition-transform duration-300 flex flex-col w-72
-                ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
-              >
+              {/* Sidebar */}
+              <div className={`fixed z-40 h-full bg-slate-900 text-white shadow-2xl transition-transform duration-300 flex flex-col w-72 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="p-6 border-b border-slate-700 flex justify-between items-center whitespace-nowrap">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-blue-600 p-2 rounded-lg shadow-lg shadow-blue-900/50">
-                      <Package className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <h1 className="text-lg font-bold leading-tight">Logística</h1>
-                      <p className="text-xs text-slate-400 font-medium">Controle 2025</p>
-                    </div>
-                  </div>
-                  <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-white">
-                    <X size={20} />
-                  </button>
+                  <div className="flex items-center gap-3"><div className="bg-blue-600 p-2 rounded-lg shadow-lg shadow-blue-900/50"><Package className="h-6 w-6 text-white" /></div><div><h1 className="text-lg font-bold leading-tight">Logística</h1><p className="text-xs text-slate-400 font-medium">Controle {viewYear}</p></div></div>
+                  <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-white"><X size={20} /></button>
                 </div>
-                
                 <nav className="flex-1 p-4 space-y-2 whitespace-nowrap">
-                  <button onClick={() => {setActiveTab('list'); setIsSidebarOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 font-medium ${activeTab === 'list' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20 translate-x-1' : 'text-slate-400 hover:bg-slate-800 hover:text-white hover:translate-x-1'}`}>
-                    <FileText size={20} />
-                    <span>Relatório Diário</span>
-                  </button>
-                  <button onClick={() => {setActiveTab('dashboard'); setIsSidebarOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 font-medium ${activeTab === 'dashboard' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20 translate-x-1' : 'text-slate-400 hover:bg-slate-800 hover:text-white hover:translate-x-1'}`}>
-                    <LayoutDashboard size={20} />
-                    <span>Dashboard Gráfico</span>
-                  </button>
+                  <button onClick={() => {setActiveTab('list'); setIsSidebarOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 font-medium ${activeTab === 'list' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20 translate-x-1' : 'text-slate-400 hover:bg-slate-800 hover:text-white hover:translate-x-1'}`}><FileText size={20} /> <span>Relatório Diário</span></button>
+                  <button onClick={() => {setActiveTab('dashboard'); setIsSidebarOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 font-medium ${activeTab === 'dashboard' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20 translate-x-1' : 'text-slate-400 hover:bg-slate-800 hover:text-white hover:translate-x-1'}`}><LayoutDashboard size={20} /> <span>Dashboard Gráfico</span></button>
                 </nav>
-
-                <div className="p-6 border-t border-slate-800 whitespace-nowrap">
-                  <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 backdrop-blur-sm">
-                    <p className="text-xs text-slate-400 mb-1 uppercase tracking-wider font-semibold">Total Geral</p>
-                    <p className="text-3xl font-bold text-white tracking-tight">{stats.total}</p>
-                  </div>
-                </div>
+                <div className="p-6 border-t border-slate-800"><p className="text-xs text-slate-400 mb-1">Total Geral ({viewYear})</p><p className="text-3xl font-bold text-white">{stats.total}</p></div>
               </div>
-
-              {isSidebarOpen && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-[1px] z-30 transition-opacity duration-300" onClick={() => setIsSidebarOpen(false)}></div>
-              )}
+              {isSidebarOpen && <div className="fixed inset-0 bg-black/40 backdrop-blur-[1px] z-30" onClick={() => setIsSidebarOpen(false)}></div>}
 
               <main className="flex-1 flex flex-col h-full overflow-hidden relative bg-slate-50/50 w-full">
-                
-                <header className="bg-white border-b border-slate-200 px-4 md:px-6 py-4 flex justify-between items-center shadow-sm z-10 gap-4">
-                  <div className="flex items-center gap-3">
-                      <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Abrir Menu">
-                        <Menu size={24} />
-                      </button>
-                      
+                <header className="bg-white border-b border-slate-200 px-4 md:px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center shadow-sm z-10 gap-4">
+                  <div className="flex items-center gap-3 w-full md:w-auto">
+                      <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"><Menu size={24} /></button>
                       <h2 className="text-xl font-bold text-slate-800 flex items-center gap-3 truncate">
                         {activeTab === 'dashboard' ? 'Dashboard' : 'Relatório'}
-                        {monthFilter !== 'ALL' && <span className="hidden sm:inline-block bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded border border-blue-200">{monthFilter}</span>}
+                        <div className="relative group">
+                            <button className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3 py-1 rounded-full border border-slate-300"><CalendarDays size={12} />{viewYear}<ChevronDown size={12} /></button>
+                            <div className="absolute top-full left-0 mt-1 w-32 bg-white border border-slate-200 rounded-lg shadow-lg hidden group-hover:block z-50 py-1">{availableYears.map(year => (<button key={year} onClick={() => setViewYear(year)} className={`block w-full text-left px-4 py-2 text-xs hover:bg-slate-50 ${viewYear === year ? 'font-bold text-blue-600' : 'text-slate-600'}`}>{year} {year === currentYear ? '(Atual)' : ''}</button>))}</div>
+                        </div>
                       </h2>
                   </div>
-
-                  <div className="flex items-center gap-3">
-                      <button 
-                        onClick={handleOpenNew}
-                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-all active:scale-95"
-                      >
-                        <Plus size={18} />
-                        <span className="hidden sm:inline">Nova Entrega</span>
-                      </button>
+                  <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+                      {viewYear === currentYear && (
+                          <button onClick={() => setShowNewYearModal(true)} className="hidden md:flex items-center gap-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg text-xs font-semibold"><CalendarDays size={16} /> Iniciar {currentYear + 1}</button>
+                      )}
+                      <button onClick={handleOpenNew} disabled={viewYear !== currentYear} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium shadow-sm transition-all active:scale-95 ${viewYear !== currentYear ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}><Plus size={18} /> <span className="hidden sm:inline">Nova Entrega</span></button>
                   </div>
                 </header>
 
+                {viewYear !== currentYear && (<div className="bg-amber-50 border-b border-amber-100 px-6 py-2 text-xs text-amber-800 flex items-center justify-center gap-2 font-medium"><History size={14} /> Você está visualizando o histórico de {viewYear}. <button onClick={() => setViewYear(currentYear)} className="underline hover:text-amber-900">Voltar para Atual</button></div>)}
+
                 <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 space-y-6">
                   
-                  <div className={`relative border-2 border-dashed rounded-xl transition-all duration-200 flex items-center justify-between gap-4 cursor-pointer group bg-white ${dragActive ? 'border-blue-500 bg-blue-50 p-8' : 'border-slate-200 hover:border-blue-400 hover:bg-slate-50 p-3'}`} onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}>
-                    <input type="file" multiple accept=".csv" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handleFileUpload} />
-                    <div className="flex items-center gap-3">
-                      <div className="bg-blue-50 p-2 rounded-full group-hover:bg-blue-100 transition-colors"><Upload className="h-4 w-4 text-blue-600" /></div>
-                      <p className="font-semibold text-slate-600 text-xs">Importar novo CSV</p>
-                    </div>
-                    {uploadStats.show && <div className="text-xs font-bold text-emerald-600 flex items-center gap-1"><CheckCircle2 size={14}/> +{uploadStats.count} registros</div>}
-                  </div>
+                  {/* Importador em Lote */}
+                  {viewYear === currentYear && (
+                      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                          <div className="flex items-center gap-4">
+                              <div className="bg-blue-50 p-3 rounded-full"><FileSpreadsheet className="h-6 w-6 text-blue-600" /></div>
+                              <div>
+                                  <h3 className="font-semibold text-slate-800">Importar Dados Mensais</h3>
+                                  <p className="text-xs text-slate-500">Copie do Excel e cole aqui para preencher rápido.</p>
+                              </div>
+                          </div>
+                          <button onClick={() => setIsImportModalOpen(true)} className="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors">
+                              <ClipboardList size={16} /> Abrir Importador
+                          </button>
+                      </div>
+                  )}
 
                   {activeTab === 'list' ? (
-                    <div className="space-y-4 animate-in fade-in duration-500">
+                    <div className="space-y-6 animate-in fade-in duration-500">
                       
+                      {/* CARDS RESTAURADOS (Estilo Large Icon) */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                          <StatCard icon={Package} label="Total" value={stats.total} subtext="Entregas registradas" color="blue" />
+                          <StatCard icon={Package} label={`Total ${viewYear}`} value={stats.total} subtext="Entregas neste ano" color="blue" />
                           <StatCard icon={Users} label="Setor Top" value={stats.topSectors[0]?.name || '-'} subtext={`${stats.topSectors[0]?.value || 0} recebimentos`} color="teal" />
                           <StatCard icon={Truck} label="Transp." value={stats.topCarriers[0]?.name || '-'} subtext={`${stats.topCarriers[0]?.value || 0} entregas`} color="orange" />
                           <StatCard insight value={stats.topSectors[0]?.name || '-'} subtext={`${stats.topSectors[0]?.value} items`} />
                       </div>
 
-                      <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col h-[calc(100vh-320px)]">
-                        
-                        <div className="p-4 border-b border-slate-100 flex flex-col xl:flex-row gap-4 items-start xl:items-center justify-between bg-white">
-                          <div className="relative w-full xl:w-96">
-                            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <input type="text" placeholder="Buscar por remetente, rastreio..." className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm focus:bg-white transition-colors" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                          </div>
-                          
-                          <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
-                            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-2">
-                                <CalendarIcon size={14} className="text-slate-400 ml-2" />
-                                <select value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} className="bg-transparent text-sm font-medium text-slate-700 py-2 px-2 focus:outline-none cursor-pointer hover:text-blue-600">
-                                    <option value="ALL">Todos os Meses</option>
-                                    {stats.availableMonths.map(m => (
-                                        <option key={m} value={m}>{m}</option>
-                                    ))}
-                                </select>
+                      <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-380px)]">
+                      
+                        {/* SIDEBAR DE MESES COM ILUSTRAÇÃO DE FUNDO */}
+                        <div className="lg:w-48 bg-white rounded-xl border border-slate-200 shadow-sm overflow-y-auto flex-shrink-0">
+                            <div className="p-4 border-b border-slate-100">
+                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Meses ({viewYear})</h3>
                             </div>
-
-                            <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
-                                {['ALL', 'LAB', 'COMPRAS'].map((filter) => (
-                                    <button key={filter} onClick={() => setQuickFilter(filter)} className={`whitespace-nowrap px-4 py-2 rounded-lg text-xs font-semibold border transition-all ${quickFilter === filter ? 'bg-slate-800 text-white border-slate-800 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
-                                        {filter === 'ALL' ? 'Todos' : filter === 'LAB' ? 'Laboratório' : 'Compras'}
-                                    </button>
-                                ))}
+                            <div className="p-2 space-y-1">
+                                {MONTHS_CONFIG.map((m) => {
+                                    const isActive = selectedMonth === m.id;
+                                    const Icon = m.icon;
+                                    return (
+                                        <button 
+                                            key={m.id}
+                                            onClick={() => setSelectedMonth(m.id)}
+                                            className={`season-btn w-full text-left px-3 py-3 rounded-lg text-sm flex items-center gap-3 
+                                              ${isActive ? `season-btn-active text-slate-800 bg-white season-${m.season}` : 'text-slate-500 hover:bg-slate-50'}`}
+                                        >
+                                            <Icon size={16} className={`${isActive ? `text-${m.color}-600` : 'text-slate-400'} z-10 relative`} />
+                                            <span className="z-10 relative">{m.name}</span>
+                                            
+                                            {/* Desenho de Fundo (Marca D'água) */}
+                                            {isActive && (
+                                                <div className="absolute -bottom-1 -right-1 opacity-20 transform rotate-12 pointer-events-none">
+                                                    <Icon size={40} className={`text-${m.color}-600`} />
+                                                </div>
+                                            )}
+                                        </button>
+                                    )
+                                })}
                             </div>
-                          </div>
                         </div>
 
-                        <div className="flex-1 overflow-auto bg-white">
-                          <table className="w-full text-sm text-left">
-                            <thead className="text-xs text-slate-400 uppercase tracking-wider font-semibold sticky top-0 z-10 bg-white border-b border-slate-100">
-                              <tr>
-                                <th className="px-6 py-4 bg-white">Info Principal</th>
-                                <th className="px-6 py-4 bg-white">Remetente / Setor</th>
-                                <th className="px-6 py-4 bg-white">Dados da Entrega</th>
-                                <th className="px-6 py-4 bg-white">Observações</th>
-                                <th className="px-6 py-4 bg-white w-10"></th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                              {filteredDeliveries.map((item, idx) => {
-                                const obsAlert = getObsAlert(item.obs);
-                                const isPending = item.entreguePara === '-' || !item.entreguePara;
-                                
-                                return (
-                                <tr key={idx} className="hover:bg-slate-50 transition-colors group">
-                                  <td className="px-6 py-4 align-top">
-                                    <div className="flex flex-col gap-1.5">
-                                        <span className="text-xs font-mono text-slate-400">{item.data}</span>
-                                        <div className="flex items-center gap-2">
-                                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${getCarrierStyle(item.transportadora)}`}>
-                                                {item.transportadora}
-                                            </span>
-                                        </div>
-                                        <span className="font-mono text-xs font-medium text-slate-700 truncate max-w-[140px]" title={item.doc}>
-                                            {item.doc}
-                                        </span>
-                                    </div>
-                                  </td>
+                        {/* TABELA DE DADOS */}
+                        <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+                          <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white gap-4">
+                            <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                                {MONTHS_CONFIG.find(m => m.id === selectedMonth)?.name}
+                                <span className="text-xs font-normal text-slate-400 border border-slate-200 rounded px-2 py-0.5">{filteredDeliveries.length} entregas</span>
+                            </h3>
+                            <div className="relative w-64">
+                              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                              <input type="text" placeholder="Filtrar neste mês..." className="w-full pl-10 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                            </div>
+                          </div>
 
-                                  <td className="px-6 py-4 align-top">
-                                     <div className="flex flex-col gap-1">
-                                        <div className="font-bold text-slate-800 text-sm group-hover:text-blue-700 transition-colors">{item.remetente}</div>
-                                        <span className={`text-[10px] font-bold uppercase tracking-wide w-fit ${getSectorStyle(item.setor)} px-1.5 py-0.5 rounded`}>
-                                            {item.setor}
-                                        </span>
-                                     </div>
-                                  </td>
-
-                                  <td className="px-6 py-4 align-top">
-                                     {!isPending ? (
-                                       <div className="flex flex-col gap-3">
-                                          {/* Quem Recebeu */}
-                                          <div className="flex items-center gap-2">
-                                              <div className="bg-emerald-100 p-1.5 rounded-full text-emerald-600 shrink-0"><UserCheck size={14} /></div>
-                                              <div>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase">Recebido por</p>
-                                                <p className="font-semibold text-slate-700 text-sm">{item.entreguePara}</p>
-                                              </div>
-                                          </div>
-                                          
-                                          {/* Quem Entregou (Novo - Só mostra se tiver valor) */}
-                                          {item.quemEntregou && item.quemEntregou !== '-' && item.quemEntregou.trim() !== '' && (
-                                              <div className="flex items-center gap-2">
-                                                  <div className="bg-blue-50 p-1.5 rounded-full text-blue-500 shrink-0"><User size={14} /></div>
-                                                  <div>
-                                                    <p className="text-[10px] text-slate-400 font-bold uppercase">Entregue por</p>
-                                                    <p className="font-medium text-slate-600 text-xs">{item.quemEntregou}</p>
-                                                  </div>
-                                              </div>
-                                          )}
-                                       </div>
-                                     ) : (
-                                       <div className="flex items-center gap-2 mt-1 opacity-60">
-                                           <div className="bg-slate-100 p-1.5 rounded-full text-slate-400 shrink-0"><Clock size={14} /></div>
-                                           <div>
-                                             <p className="text-xs text-slate-400 font-medium">Status</p>
-                                             <p className="font-semibold text-slate-500 text-sm italic">Pendente</p>
-                                           </div>
-                                       </div>
-                                     )}
-                                  </td>
-
-                                  <td className="px-6 py-4 align-top">
-                                      {item.obs && (
-                                          <div className={`mt-1 text-xs px-2 py-2 rounded border max-w-[200px] leading-relaxed ${
-                                              obsAlert === 'alert' 
-                                              ? 'bg-orange-50 text-orange-800 border-orange-100 font-medium' 
-                                              : 'bg-slate-50 text-slate-500 border-slate-100 italic'
-                                          }`}>
-                                              {obsAlert === 'alert' && <AlertTriangle size={12} className="inline mr-1 mb-0.5 text-orange-500" />}
-                                              {item.obs}
-                                          </div>
-                                      )}
-                                  </td>
-
-                                  <td className="px-6 py-4 align-middle text-right">
-                                     <button 
-                                        onClick={() => handleOpenEdit(item, idx)}
-                                        className="p-2 rounded-full hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-all opacity-0 group-hover:opacity-100"
-                                        title="Editar Entrega"
-                                     >
-                                        <Edit3 size={18} />
-                                     </button>
-                                  </td>
+                          <div className="flex-1 overflow-auto bg-white">
+                            <table className="w-full text-sm text-left">
+                              <thead className="text-xs text-slate-400 uppercase tracking-wider font-semibold sticky top-0 z-10 bg-white border-b border-slate-100 shadow-sm">
+                                <tr>
+                                  <th className="px-6 py-3 bg-white">Data / Rastreio</th>
+                                  <th className="px-6 py-3 bg-white">Remetente</th>
+                                  <th className="px-6 py-3 bg-white">Entrega</th>
+                                  <th className="px-6 py-3 bg-white">Setor</th>
+                                  <th className="px-6 py-3 bg-white w-10"></th>
                                 </tr>
-                              )})}
-                              {filteredDeliveries.length === 0 && <tr><td colSpan="6" className="px-6 py-16 text-center text-slate-400">Nenhum registro encontrado.</td></tr>}
-                            </tbody>
-                          </table>
+                              </thead>
+                              <tbody className="divide-y divide-slate-50">
+                                {filteredDeliveries.length > 0 ? filteredDeliveries.map((item, idx) => {
+                                  const obsAlert = getObsAlert(item.obs);
+                                  const isPending = item.entreguePara === '-' || !item.entreguePara;
+                                  return (
+                                  <tr key={idx} className="hover:bg-slate-50 transition-colors group">
+                                    <td className="px-6 py-3 align-top">
+                                      <div className="flex flex-col gap-1">
+                                          <span className="text-xs font-bold text-slate-700">{item.data}</span>
+                                          <div className="flex items-center gap-2"><span className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${getCarrierStyle(item.transportadora)}`}>{item.transportadora}</span></div>
+                                          <span className="font-mono text-[10px] text-slate-400 truncate max-w-[100px]" title={item.doc}>{item.doc}</span>
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-3 align-top">
+                                       <div className="font-medium text-slate-800 text-xs group-hover:text-blue-700 transition-colors">{item.remetente}</div>
+                                       {item.obs && (
+                                            <div className={`mt-1 text-[10px] px-1.5 py-1 rounded border max-w-[180px] leading-tight ${obsAlert === 'alert' ? 'bg-orange-50 text-orange-800 border-orange-100 font-medium' : 'bg-slate-50 text-slate-500 border-slate-100 italic'}`}>
+                                                {obsAlert === 'alert' && <AlertTriangle size={10} className="inline mr-1 text-orange-500" />}{item.obs}
+                                            </div>
+                                        )}
+                                    </td>
+                                    <td className="px-6 py-3 align-top">
+                                       {!isPending ? (
+                                         <div className="flex flex-col gap-1">
+                                            <div className="flex items-center gap-1.5"><UserCheck size={12} className="text-emerald-600" /><span className="text-xs font-semibold text-slate-700">{item.entreguePara}</span></div>
+                                            {item.quemEntregou && item.quemEntregou !== '-' && (
+                                                <div className="flex items-center gap-1.5 ml-0.5"><span className="text-[10px] text-slate-400">Por: {item.quemEntregou}</span></div>
+                                            )}
+                                         </div>
+                                       ) : (
+                                         <div className="flex items-center gap-1.5 opacity-60"><Clock size={12} className="text-slate-400" /><span className="text-xs font-medium text-slate-500 italic">Pendente</span></div>
+                                       )}
+                                    </td>
+                                    <td className="px-6 py-3 align-top">
+                                        <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${getSectorStyle(item.setor)}`}>{item.setor}</span>
+                                    </td>
+                                    <td className="px-6 py-3 align-middle text-right">
+                                       {viewYear === currentYear && (
+                                           <button onClick={() => handleOpenEdit(item)} className="p-1.5 rounded hover:bg-blue-50 text-slate-300 hover:text-blue-600 transition-all" title="Editar"><Edit3 size={16} /></button>
+                                       )}
+                                    </td>
+                                  </tr>
+                                )}) : (
+                                    <tr><td colSpan="5" className="px-6 py-20 text-center text-slate-400 flex flex-col items-center gap-2"><Package size={32} className="opacity-20" /><span>Nenhuma entrega registrada em {MONTHS_CONFIG.find(m => m.id === selectedMonth)?.name}.</span></td></tr>
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -563,32 +611,12 @@
                      <div className="space-y-6 animate-in fade-in duration-500 h-full flex flex-col">
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
                           <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
-                            <h3 className="text-base font-bold text-slate-800 mb-6 flex items-center gap-2"><CalendarIcon size={18} className="text-slate-400"/> Fluxo Mensal</h3>
-                            <div className="flex-1 min-h-0">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={stats.chartData}>
-                                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
-                                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                                  <RechartsTooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-                                  <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={40} />
-                                </BarChart>
-                              </ResponsiveContainer>
-                            </div>
+                            <h3 className="text-base font-bold text-slate-800 mb-6 flex items-center gap-2"><CalendarIcon size={18} className="text-slate-400"/> Fluxo Anual ({viewYear})</h3>
+                            <div className="flex-1 min-h-0"><ResponsiveContainer width="100%" height="100%"><BarChart data={stats.chartData}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" /><XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} /><RechartsTooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} /><Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={40} /></BarChart></ResponsiveContainer></div>
                           </div>
                           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
-                            <h3 className="text-base font-bold text-slate-800 mb-6 flex items-center gap-2"><PieChart size={18} className="text-slate-400"/> Por Setor</h3>
-                            <div className="flex-1 min-h-0">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                  <Pie data={stats.topSectors} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                                    {stats.topSectors.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />))}
-                                  </Pie>
-                                  <RechartsTooltip />
-                                  <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{fontSize: '12px'}} />
-                                </PieChart>
-                              </ResponsiveContainer>
-                            </div>
+                            <h3 className="text-base font-bold text-slate-800 mb-6 flex items-center gap-2"><PieChart size={18} className="text-slate-400"/> Por Setor ({viewYear})</h3>
+                            <div className="flex-1 min-h-0"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={stats.topSectors} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">{stats.topSectors.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />))}</Pie><RechartsTooltip /><Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{fontSize: '12px'}} /></PieChart></ResponsiveContainer></div>
                           </div>
                         </div>
                      </div>
@@ -596,78 +624,89 @@
                 </div>
               </main>
 
+              {/* MODAL DE IMPORTAÇÃO EM LOTE */}
+              {isImportModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden">
+                    <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                        <div>
+                            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><FileSpreadsheet className="text-blue-600" /> Importador de Dados</h3>
+                            <p className="text-xs text-slate-500">Cole os dados do seu Excel abaixo.</p>
+                        </div>
+                        <button onClick={() => setIsImportModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={24} /></button>
+                    </div>
+                    
+                    <div className="flex-1 p-6 flex flex-col gap-4 overflow-hidden">
+                        <div className="flex items-center gap-4">
+                            <div className="w-48">
+                                <label className="text-xs font-semibold text-slate-500 uppercase mb-1 block">Mês de Referência</label>
+                                <select value={importForm.month} onChange={(e) => setImportForm({...importForm, month: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg bg-white text-sm">
+                                    {MONTHS_CONFIG.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                                </select>
+                            </div>
+                            <div className="flex-1 bg-blue-50 text-blue-700 text-xs p-3 rounded-lg border border-blue-100">
+                                <strong>Dica:</strong> O sistema ignora cabeçalhos automaticamente. Cole apenas as células do Excel.
+                            </div>
+                        </div>
+
+                        <textarea 
+                            className="flex-1 w-full p-4 border border-slate-300 rounded-xl font-mono text-xs leading-relaxed focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                            placeholder={`Cole aqui suas linhas do Excel...\nExemplo:\n01/01/2025\tEmpresa X\tSedex\t12345\tJoão\tTI\tEntregue\n02/01/2025\tEmpresa Y\tDHL\t54321\tMaria\tRH\t-`}
+                            value={importForm.textData}
+                            onChange={(e) => setImportForm({...importForm, textData: e.target.value})}
+                        ></textarea>
+                    </div>
+
+                    <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+                        <button onClick={() => setIsImportModalOpen(false)} className="px-6 py-3 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors">Cancelar</button>
+                        <div className="flex gap-3">
+                            <button onClick={handleProcessImport} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-lg shadow-blue-900/20 flex items-center gap-2"><CheckCircle2 size={18} /> Processar e Adicionar</button>
+                            <button onClick={() => setIsImportModalOpen(false)} className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-lg shadow-emerald-900/20">Finalizar Importação</button>
+                        </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Modal Cadastro Manual */}
               {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
                   <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
                     <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                      <h3 className="text-lg font-bold text-slate-800">
-                        {editingIndex !== null ? 'Editar Entrega' : 'Nova Entrega (Check-in)'}
-                      </h3>
-                      <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
-                        <X size={24} />
-                      </button>
+                      <h3 className="text-lg font-bold text-slate-800">{editingIndex !== null ? 'Editar Entrega' : `Nova Entrega ${currentYear}`}</h3>
+                      <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={24} /></button>
                     </div>
-                    
                     <form onSubmit={handleSaveDelivery} className="p-6 space-y-4">
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold text-slate-500 uppercase">Data</label>
-                          <input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="DD/MM/AAAA" value={newDeliveryForm.data} onChange={e => setNewDeliveryForm({...newDeliveryForm, data: e.target.value})} />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold text-slate-500 uppercase">Rastreio / Doc</label>
-                          <input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Código de Rastreio" value={newDeliveryForm.doc} onChange={e => setNewDeliveryForm({...newDeliveryForm, doc: e.target.value})} />
-                        </div>
+                        <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Data</label><input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="DD/MM/AAAA" value={newDeliveryForm.data} onChange={e => setNewDeliveryForm({...newDeliveryForm, data: e.target.value})} /></div>
+                        <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Rastreio / Doc</label><input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Código" value={newDeliveryForm.doc} onChange={e => setNewDeliveryForm({...newDeliveryForm, doc: e.target.value})} /></div>
                       </div>
-
-                      <div className="space-y-1">
-                        <label className="text-xs font-semibold text-slate-500 uppercase">Remetente</label>
-                        <input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Empresa ou Pessoa" value={newDeliveryForm.remetente} onChange={e => setNewDeliveryForm({...newDeliveryForm, remetente: e.target.value})} />
-                      </div>
-
+                      <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Remetente</label><input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.remetente} onChange={e => setNewDeliveryForm({...newDeliveryForm, remetente: e.target.value})} /></div>
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold text-slate-500 uppercase">Transportadora</label>
-                          <select className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white" value={newDeliveryForm.transportadora} onChange={e => setNewDeliveryForm({...newDeliveryForm, transportadora: e.target.value})}>
-                            <option value="">Selecione...</option>
-                            <option value="SEDEX">Correios / Sedex</option>
-                            <option value="PAC">Correios / PAC</option>
-                            <option value="FEDEX">FedEx</option>
-                            <option value="DHL">DHL</option>
-                            <option value="JADLOG">Jadlog</option>
-                            <option value="MOTOBOY">Motoboy</option>
-                            <option value="OUTROS">Outros</option>
-                          </select>
-                        </div>
-                        <div className="space-y-1">
-                           <label className="text-xs font-semibold text-slate-500 uppercase">Setor</label>
-                           <input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ex: Compras" value={newDeliveryForm.setor} onChange={e => setNewDeliveryForm({...newDeliveryForm, setor: e.target.value})} />
-                        </div>
+                        <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Transportadora</label><select className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white" value={newDeliveryForm.transportadora} onChange={e => setNewDeliveryForm({...newDeliveryForm, transportadora: e.target.value})}><option value="">Selecione...</option><option value="SEDEX">Correios / Sedex</option><option value="PAC">Correios / PAC</option><option value="FEDEX">FedEx</option><option value="DHL">DHL</option><option value="JADLOG">Jadlog</option><option value="MOTOBOY">Motoboy</option><option value="OUTROS">Outros</option></select></div>
+                        <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Setor</label><input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.setor} onChange={e => setNewDeliveryForm({...newDeliveryForm, setor: e.target.value})} /></div>
                       </div>
-
                       <div className="grid grid-cols-2 gap-4">
-                         <div className="space-y-1">
-                            <label className="text-xs font-semibold text-slate-500 uppercase">Entregue Para</label>
-                            <input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Nome de quem recebeu" value={newDeliveryForm.entreguePara} onChange={e => setNewDeliveryForm({...newDeliveryForm, entreguePara: e.target.value})} />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-xs font-semibold text-slate-500 uppercase">Entregue Por</label>
-                            <input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Quem realizou a entrega" value={newDeliveryForm.quemEntregou} onChange={e => setNewDeliveryForm({...newDeliveryForm, quemEntregou: e.target.value})} />
-                          </div>
+                         <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Entregue Para</label><input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.entreguePara} onChange={e => setNewDeliveryForm({...newDeliveryForm, entreguePara: e.target.value})} /></div>
+                         <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Entregue Por</label><input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.quemEntregou} onChange={e => setNewDeliveryForm({...newDeliveryForm, quemEntregou: e.target.value})} /></div>
                       </div>
-
-                      <div className="space-y-1">
-                        <label className="text-xs font-semibold text-slate-500 uppercase">Observações</label>
-                        <textarea className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-20 resize-none" placeholder="Detalhes adicionais..." value={newDeliveryForm.obs} onChange={e => setNewDeliveryForm({...newDeliveryForm, obs: e.target.value})}></textarea>
-                      </div>
-
-                      <div className="pt-4 flex gap-3">
-                        <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 font-medium">Cancelar</button>
-                        <button type="submit" className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2">
-                          <Save size={18} /> {editingIndex !== null ? 'Atualizar' : 'Salvar Entrada'}
-                        </button>
-                      </div>
+                      <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Observações</label><textarea className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-20 resize-none" value={newDeliveryForm.obs} onChange={e => setNewDeliveryForm({...newDeliveryForm, obs: e.target.value})}></textarea></div>
+                      <div className="pt-4 flex gap-3"><button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 font-medium">Cancelar</button><button type="submit" className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"><Save size={18} /> {editingIndex !== null ? 'Atualizar' : 'Salvar Entrada'}</button></div>
                     </form>
+                  </div>
+                </div>
+              )}
+
+              {/* Modal Iniciar Novo Ano */}
+              {showNewYearModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                    <div className="p-6 text-center space-y-4">
+                        <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto"><CalendarDays className="text-blue-600 h-8 w-8" /></div>
+                        <h3 className="text-xl font-bold text-slate-800">Deseja iniciar o ano {currentYear + 1}?</h3>
+                        <p className="text-slate-500 text-sm">Ao confirmar, o relatório de <strong>{currentYear}</strong> será arquivado como histórico e o painel será preparado para novos registros de <strong>{currentYear + 1}</strong>.</p>
+                        <div className="pt-4 flex gap-3"><button onClick={() => setShowNewYearModal(false)} className="flex-1 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 font-medium">Cancelar</button><button onClick={handleStartNewYear} className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg">Sim, Iniciar {currentYear + 1}</button></div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -680,3 +719,4 @@
     </script>
 </body>
 </html>
+
