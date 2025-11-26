@@ -57,8 +57,8 @@
     <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
-<body class="bg-slate-50 text-slate-800">
-    <div id="root"></div>
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex flex-col">
+    <div id="root" class="h-full"></div>
 
     <script type="text/babel" data-type="module">
         import React, { useState, useMemo, useEffect } from 'react';
@@ -496,17 +496,17 @@
                   )}
 
                   {activeTab === 'list' ? (
-                    <div className="space-y-6 animate-in fade-in duration-500">
+                    <div className="space-y-6 animate-in fade-in duration-500 h-full flex flex-col">
                       
                       {/* CARDS DE MÉTRICAS */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print flex-shrink-0">
                           <StatCard icon={Package} label={`Total ${viewYear}`} value={stats.total} subtext="Entregas neste ano" color="blue" />
                           <StatCard icon={Users} label="Setor Top" value={stats.topSectors[0]?.name || '-'} subtext={`${stats.topSectors[0]?.value || 0} recebimentos`} color="teal" />
                           <StatCard icon={Truck} label="Transp." value={stats.topCarriers[0]?.name || '-'} subtext={`${stats.topCarriers[0]?.value || 0} entregas`} color="orange" />
                           <StatCard insight value={stats.topSectors[0]?.name || '-'} subtext={`${stats.topSectors[0]?.value} items`} />
                       </div>
 
-                      <div className="flex flex-col lg:flex-row gap-6 h-auto lg:h-[calc(100vh-380px)]">
+                      <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
                       
                         {/* SIDEBAR DE MESES (Retrátil) */}
                         {isMonthSidebarOpen && (
@@ -538,7 +538,7 @@
 
                         {/* TABELA DE DADOS */}
                         <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden h-full">
-                          <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between bg-white gap-4 no-print">
+                          <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between bg-white gap-4 no-print flex-shrink-0">
                             <div className="flex items-center gap-3 w-full sm:w-auto">
                                 <button 
                                     onClick={() => setIsMonthSidebarOpen(!isMonthSidebarOpen)}
@@ -600,10 +600,10 @@
                             <table className="w-full text-sm text-left">
                               <thead className="text-xs text-slate-400 uppercase tracking-wider font-semibold sticky top-0 z-10 bg-white border-b border-slate-100 shadow-sm">
                                 <tr>
-                                  <th className="px-6 py-3 bg-white">Data / Rastreio</th>
-                                  <th className="px-6 py-3 bg-white">Remetente</th>
-                                  <th className="px-6 py-3 bg-white">Entrega</th>
-                                  <th className="px-6 py-3 bg-white">Setor</th>
+                                  <th className="px-6 py-3 bg-white text-center">Data / Rastreio</th>
+                                  <th className="px-6 py-3 bg-white text-center">Remetente</th>
+                                  <th className="px-6 py-3 bg-white text-center">Entrega</th>
+                                  <th className="px-6 py-3 bg-white text-center">Setor</th>
                                   <th className="px-6 py-3 bg-white w-10"></th>
                                 </tr>
                               </thead>
@@ -613,14 +613,14 @@
                                   const isPending = item.entreguePara === '-' || !item.entreguePara;
                                   return (
                                   <tr key={idx} className="hover:bg-slate-50 transition-colors group">
-                                    <td className="px-6 py-3 align-top w-40">
-                                      <div className="flex flex-col gap-1">
+                                    <td className="px-6 py-3 align-top w-40 text-center">
+                                      <div className="flex flex-col gap-1 items-center">
                                           <span className="text-xs font-bold text-slate-700">{item.data}</span>
                                           <div className="flex items-center gap-2"><span className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${getCarrierStyle(item.transportadora)}`}>{item.transportadora}</span></div>
                                           <span className="font-mono text-[10px] text-slate-400 truncate max-w-[100px]" title={item.doc}>{item.doc}</span>
                                       </div>
                                     </td>
-                                    <td className="px-6 py-3 align-top">
+                                    <td className="px-6 py-3 align-top text-center">
                                        <div className="font-medium text-slate-800 text-sm group-hover:text-blue-700 transition-colors mb-1.5">{item.remetente}</div>
                                        {item.obs && (
                                             <div className={`text-xs px-2 py-1.5 rounded border inline-block max-w-md leading-snug font-medium ${obsAlert === 'alert' ? 'bg-orange-50 text-orange-800 border-orange-100' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
@@ -629,19 +629,19 @@
                                             </div>
                                         )}
                                     </td>
-                                    <td className="px-6 py-3 align-top w-48">
+                                    <td className="px-6 py-3 align-top w-48 text-center">
                                        {!isPending ? (
-                                         <div className="flex flex-col gap-1">
+                                         <div className="flex flex-col gap-1 items-center">
                                             <div className="flex items-center gap-1.5"><UserCheck size={14} className="text-emerald-600" /><span className="text-xs font-semibold text-slate-700">{item.entreguePara}</span></div>
                                             {item.quemEntregou && item.quemEntregou !== '-' && (
                                                 <div className="flex items-center gap-1.5 ml-0.5"><span className="text-[10px] text-slate-400">Por: {item.quemEntregou}</span></div>
                                             )}
                                          </div>
                                        ) : (
-                                         <div className="flex items-center gap-1.5 opacity-60"><Clock size={14} className="text-slate-400" /><span className="text-xs font-medium text-slate-500 italic">Pendente</span></div>
+                                         <div className="flex items-center gap-1.5 opacity-60 justify-center"><Clock size={14} className="text-slate-400" /><span className="text-xs font-medium text-slate-500 italic">Pendente</span></div>
                                        )}
                                     </td>
-                                    <td className="px-6 py-3 align-top w-32">
+                                    <td className="px-6 py-3 align-top w-32 text-center">
                                         <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${getSectorStyle(item.setor)}`}>{item.setor}</span>
                                     </td>
                                     <td className="px-6 py-3 align-middle text-right w-10">
@@ -730,51 +730,51 @@
                     </div>
                     <form onSubmit={handleSaveDelivery} className="p-6 space-y-4">
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help group relative">
+                        <div className="space-y-1 relative group tooltip-trigger">
+                            <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">
                                 Data <HelpCircle size={12} className="text-slate-400"/>
-                                <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50 text-center">Data que a encomenda chegou na empresa.</div>
                             </label>
+                            <div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Data que a encomenda chegou na portaria.</div>
                             <input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="DD/MM/AAAA" value={newDeliveryForm.data} onChange={e => setNewDeliveryForm({...newDeliveryForm, data: e.target.value})} />
                         </div>
-                        <div className="space-y-1">
-                            <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help group relative">
+                        <div className="space-y-1 relative group tooltip-trigger">
+                            <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">
                                 Rastreio / Doc <HelpCircle size={12} className="text-slate-400"/>
-                                <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50 text-center">Código de rastreio dos Correios ou número da Nota Fiscal.</div>
                             </label>
+                            <div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Código de rastreio dos Correios ou número da Nota Fiscal.</div>
                             <input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Código" value={newDeliveryForm.doc} onChange={e => setNewDeliveryForm({...newDeliveryForm, doc: e.target.value})} />
                         </div>
                       </div>
-                      <div className="space-y-1">
-                          <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help group relative">
+                      <div className="space-y-1 relative group tooltip-trigger">
+                          <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">
                               Remetente <HelpCircle size={12} className="text-slate-400"/>
-                              <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50 text-center">Nome da empresa ou pessoa que enviou a encomenda.</div>
                           </label>
+                          <div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Nome da empresa ou pessoa que enviou a encomenda.</div>
                           <input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.remetente} onChange={e => setNewDeliveryForm({...newDeliveryForm, remetente: e.target.value})} />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Transportadora</label><select className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white" value={newDeliveryForm.transportadora} onChange={e => setNewDeliveryForm({...newDeliveryForm, transportadora: e.target.value})}><option value="">Selecione...</option><option value="SEDEX">Correios / Sedex</option><option value="PAC">Correios / PAC</option><option value="FEDEX">FedEx</option><option value="DHL">DHL</option><option value="JADLOG">Jadlog</option><option value="MOTOBOY">Motoboy</option><option value="OUTROS">Outros</option></select></div>
-                        <div className="space-y-1">
-                            <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help group relative">
+                        <div className="space-y-1 relative group tooltip-trigger">
+                            <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">
                                 Setor <HelpCircle size={12} className="text-slate-400"/>
-                                <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50 text-center">Departamento de destino (Ex: Compras, RH, TI).</div>
                             </label>
+                            <div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Departamento de destino (Ex: Compras, RH, TI).</div>
                             <input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.setor} onChange={e => setNewDeliveryForm({...newDeliveryForm, setor: e.target.value})} />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
-                         <div className="space-y-1">
-                             <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help group relative">
+                         <div className="space-y-1 relative group tooltip-trigger">
+                             <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">
                                  Entregue Para <HelpCircle size={12} className="text-slate-400"/>
-                                 <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50 text-center">Quem recebeu a encomenda (assinou). Deixe em branco se pendente.</div>
                              </label>
+                             <div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Quem recebeu a encomenda (assinou). Deixe em branco se pendente.</div>
                              <input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.entreguePara} onChange={e => setNewDeliveryForm({...newDeliveryForm, entreguePara: e.target.value})} />
                          </div>
-                         <div className="space-y-1">
-                             <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help group relative">
+                         <div className="space-y-1 relative group tooltip-trigger">
+                             <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">
                                  Entregue Por <HelpCircle size={12} className="text-slate-400"/>
-                                 <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50 text-center">Funcionário da logística que realizou a entrega.</div>
                              </label>
+                             <div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Funcionário da logística que realizou a entrega.</div>
                              <input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.quemEntregou} onChange={e => setNewDeliveryForm({...newDeliveryForm, quemEntregou: e.target.value})} />
                          </div>
                       </div>
@@ -807,5 +807,6 @@
     </script>
 </body>
 </html>
+
 
 
