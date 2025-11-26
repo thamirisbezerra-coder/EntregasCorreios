@@ -99,42 +99,9 @@
 
         const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#6366f1', '#ec4899'];
 
-        // --- Dados de Referência (Todos os Meses) ---
+        // --- Dados de Exemplo (Serão apagados ao importar) ---
         const INITIAL_DATA = [
-          // Janeiro
-          { data: '02/01/2025', remetente: 'LUISA', transportadora: '****', doc: '1001815000', entreguePara: 'Paulo cunha', quemEntregou: '', setor: 'P&D', obs: 'Entregue em mãos!' },
-          { data: '03/01/2025', remetente: 'HENRIPRINT GRAFICA', transportadora: 'SEDEX', doc: 'AA812420554BR', entreguePara: 'Jhonatas Silva', quemEntregou: '', setor: 'COMPRAS', obs: 'Deixado em sua mesa!' },
-          // Fevereiro
-          { data: '03/02/2025', remetente: 'MAIS MU', transportadora: '****', doc: '****', entreguePara: 'Aline Emerenciano', quemEntregou: '', setor: 'SEL', obs: '' },
-          { data: '20/02/2025', remetente: 'CONECT JOINVILLE', transportadora: '****', doc: 'LG3CONJBW', entreguePara: 'Fabio', quemEntregou: '', setor: 'TI', obs: '' },
-          // Março
-          { data: '05/03/2025', remetente: 'ORIGIN', transportadora: 'FEDEX', doc: '285780863096', entreguePara: 'Priscila Zaccardelli', quemEntregou: '', setor: 'COMPRAS', obs: '' },
-          { data: '21/03/2025', remetente: 'CARLOS VINICIUS', transportadora: 'PAC', doc: 'QN191350474BR', entreguePara: 'Gustavo Bonfim', quemEntregou: '', setor: 'GERENTE', obs: 'Deixado em sua mesa!' },
-          // Abril
-          { data: '01/04/2025', remetente: 'CARLOS SARMIENTO', transportadora: 'DHL', doc: '4938879013', entreguePara: 'Maria Bernardes', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue para Maria!' },
-          { data: '28/04/2025', remetente: 'WORLEE', transportadora: 'SEDEX', doc: 'AC505861907BR', entreguePara: 'Jhonatas Silva', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos' },
-          // Maio
-          { data: '05/05/2025', remetente: 'COLOR ANDINA FOODS', transportadora: 'SEDEX', doc: 'AC534888354BR', entreguePara: 'Priscila', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
-          { data: '30/05/2025', remetente: 'SANSIRIL', transportadora: 'SEDEX', doc: 'OY471896051BR', entreguePara: 'Priscila Zaccardelli', quemEntregou: '', setor: 'COMPRAS', obs: 'Deixado na sua mesa!' },
-          // Junho
-          { data: '02/06/2025', remetente: 'DOHLER AMERICA', transportadora: 'SEDEX', doc: 'AC664235915BR', entreguePara: 'Michelle Silva', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
-          { data: '30/06/2025', remetente: 'BIOGHEN NUTRITION', transportadora: '*', doc: '*', entreguePara: 'Mateus Fernandes', quemEntregou: '', setor: 'LABORATORIO', obs: 'Sem a/c entregue p/ Mateus' },
-          // Julho
-          { data: '01/07/2025', remetente: 'ZHANGYU', transportadora: 'FEDEX', doc: '*', entreguePara: 'Jessica Souza', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
-          { data: '30/07/2025', remetente: 'CAFFEINE ARMY', transportadora: '*', doc: '*', entreguePara: 'Mateus Fernandes', quemEntregou: '', setor: 'LABORATORIO', obs: 'Sem a/c entregue para Mateus F.!' },
-          // Agosto
-          { data: '01/08/2025', remetente: 'DUX COMPANY', transportadora: '*', doc: '*', entreguePara: 'Amanda', quemEntregou: '', setor: 'LABORATÓRIO', obs: 'Sem a/c entregue para Amanda!' },
-          { data: '27/08/2025', remetente: 'UNILIFE', transportadora: 'SEDEX', doc: 'AC982808065BR', entreguePara: 'Sidney Rodrigues', quemEntregou: '', setor: 'LABORATORIO', obs: 'Entregue p/ Mateus' },
-          // Setembro
-          { data: '01/09/2025', remetente: 'NOVAPROM', transportadora: 'SEDEX', doc: 'OY585202177BR', entreguePara: 'MICHELLE SILVA', quemEntregou: '', setor: 'COMPRAS', obs: 'entregue em mãos!' },
-          { data: '26/09/2025', remetente: 'LBN IND', transportadora: 'SEDEX', doc: 'AB539657281BR', entreguePara: 'FABIANA', quemEntregou: '', setor: 'REFEITÓRIO', obs: '' },
-          // Outubro
-          { data: '01/10/2025', remetente: 'HUBEI XINGFA', transportadora: 'DHL', doc: '-', entreguePara: 'MARCELO PRAIA', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
-          { data: '29/10/2025', remetente: 'FHOM ALIMENTOS', transportadora: 'SEDEX', doc: 'AB640664035BR', entreguePara: 'ANA MOTA', quemEntregou: '', setor: 'VENDAS', obs: 'Entregue em mãos!' },
-          // Novembro
-          { data: '03/11/2025', remetente: 'RENATA AMARAL', transportadora: '-', doc: '-', entreguePara: 'NATHALIA MEDEIROS', quemEntregou: '', setor: 'MANUTENÇÃO', obs: 'Entregue em mãos!' },
-          { data: '25/11/2025', remetente: 'DAY HOME COMERCIAL', transportadora: 'SEDEX', doc: 'AB718330752BR', entreguePara: '-', quemEntregou: '', setor: 'REFEITÓRIO', obs: 'Regiane retirou' },
-          // Dezembro (Vazio por enquanto, mas estrutura pronta)
+          { data: '01/01/2025', remetente: 'EXEMPLO', transportadora: 'TESTE', doc: '000000', entreguePara: 'Fulano', quemEntregou: '', setor: 'TESTE', obs: 'Estes dados são apenas ilustrativos.' }
         ];
 
         // --- Configuração dos Meses e Estações ---
@@ -148,13 +115,14 @@
             { id: '07', name: 'Julho', season: 'winter', icon: Snowflake, color: 'blue' },
             { id: '08', name: 'Agosto', season: 'winter', icon: Snowflake, color: 'blue' },
             { id: '09', name: 'Setembro', season: 'spring', icon: CloudRain, color: 'green' },
-            { id: '10', name: 'Outubro', season: 'spring', icon: Umbrella, color: 'green' }, // Chuva em outubro (exemplo)
-            { id: '11', name: 'Novembro', season: 'spring', icon: CloudLightning, color: 'green' }, // Chuva e raios em novembro
+            { id: '10', name: 'Outubro', season: 'spring', icon: Umbrella, color: 'green' },
+            { id: '11', name: 'Novembro', season: 'spring', icon: CloudLightning, color: 'green' },
             { id: '12', name: 'Dezembro', season: 'summer', icon: Sun, color: 'orange' },
         ];
 
         function App() {
           const [deliveries, setDeliveries] = useState(INITIAL_DATA);
+          const [isDemoData, setIsDemoData] = useState(true); // Controle de dados de exemplo
           const [searchTerm, setSearchTerm] = useState('');
           const [activeTab, setActiveTab] = useState('list'); 
           const [dragActive, setDragActive] = useState(false);
@@ -162,7 +130,7 @@
           const [quickFilter, setQuickFilter] = useState('ALL');
           
           // Seleção de Mês Automática
-          const currentMonthIndex = new Date().getMonth(); // 0-11
+          const currentMonthIndex = new Date().getMonth(); 
           const currentMonthId = String(currentMonthIndex + 1).padStart(2, '0');
           const [selectedMonth, setSelectedMonth] = useState(currentMonthId); 
 
@@ -199,9 +167,10 @@
                 });
                 if (loadedData.length > 0) {
                   setDeliveries(loadedData);
+                  setIsDemoData(false); // Dados reais encontrados
                 }
               } catch (e) {
-                // console.log("Erro ao buscar:", e);
+                // console.log("Modo offline ou erro:", e);
               }
             };
             fetchData();
@@ -226,37 +195,62 @@
             return 'text-slate-500 bg-slate-100';
           };
 
-          // --- Parser Inteligente ---
+          // --- Parser Inteligente e Robusto ---
           const parsePastedText = (text) => {
             const lines = text.split('\n');
             const newDeliveries = [];
+            
+            // Detecta separador na primeira linha de dados válida
+            let separator = '\t'; // Padrão Excel
+            for(let line of lines) {
+                const trimmed = line.trim();
+                if(trimmed && !trimmed.match(/^\d{2} DE/) && !trimmed.toLowerCase().startsWith('entrega')) {
+                    const tabs = (trimmed.match(/\t/g) || []).length;
+                    const commas = (trimmed.match(/,/g) || []).length;
+                    const semis = (trimmed.match(/;/g) || []).length;
+                    if (commas > tabs && commas > semis) separator = ',';
+                    if (semis > tabs && semis > commas) separator = ';';
+                    break;
+                }
+            }
+
             lines.forEach(line => {
               const cleanLine = line.trim();
               if (!cleanLine) return;
+              // Ignora cabeçalhos
               if (cleanLine.match(/^\d{2} DE [A-ZÇ]+ \([A-Z]+\)/i)) return;
               if (cleanLine.toLowerCase().startsWith('entrega')) return;
 
-              let columns = cleanLine.includes('\t') ? cleanLine.split('\t') : cleanLine.split(',');
+              const columns = cleanLine.split(separator);
               
-              if (columns[0] && (columns[0].match(/\d{4}-\d{1,2}-\d{1,2}/) || columns[0].match(/\d{1,2}\/\d{1,2}\/\d{2,4}/))) {
-                let dateStr = columns[0].trim();
+              // Validação flexível de data na primeira coluna
+              const col0 = columns[0] ? columns[0].trim() : '';
+              
+              // Regex aceita: YYYY-MM-DD ou D/M/YYYY ou DD/MM/YYYY
+              if (col0 && (col0.match(/^\d{4}-\d{1,2}-\d{1,2}/) || col0.match(/^\d{1,2}\/\d{1,2}\/\d{2,4}/))) {
+                let dateStr = col0;
+                
+                // Padronizar data para DD/MM/YYYY se estiver YYYY-MM-DD
                 if (dateStr.includes('-')) {
-                    const [year, month, day] = dateStr.split('-');
-                    dateStr = `${day}/${month}/${year}`;
+                    const parts = dateStr.split('-');
+                    if(parts[0].length === 4) { // YYYY-MM-DD
+                        dateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    }
                 }
+
                 const cleanSetor = (columns[5]?.trim().toUpperCase() || 'GERAL').replace(/[.,]/g, '').replace(/\s+/g, ' '); 
                 let cleanTransp = columns[2]?.trim().replace(/\*/g, '').replace('****', '') || 'NÃO INF.';
                 if (cleanTransp.length < 2) cleanTransp = 'NÃO INF.';
 
                 newDeliveries.push({
                   data: dateStr,
-                  remetente: columns[1]?.trim().toUpperCase(),
+                  remetente: columns[1]?.trim().toUpperCase() || '',
                   transportadora: cleanTransp,
-                  doc: columns[3]?.trim(),
+                  doc: columns[3]?.trim() || '-',
                   entreguePara: columns[4]?.trim() || '-',
-                  quemEntregou: '', 
+                  quemEntregou: '', // Histórico não tem esse dado
                   setor: cleanSetor,
-                  obs: columns.slice(6).join(' ').trim().replace(/"/g, '')
+                  obs: columns.slice(6).join(' ').trim().replace(/"/g, '') || ''
                 });
               }
             });
@@ -266,22 +260,41 @@
           // --- Handlers ---
           const handleProcessImport = async () => {
               if (!importForm.textData) return;
+              
               const parsedData = parsePastedText(importForm.textData);
+              
               if (parsedData.length === 0) {
-                  alert("Nenhum dado válido encontrado.");
+                  alert("Ops! Não consegui ler nenhum dado válido. \n\nVerifique se:\n1. A primeira coluna é a DATA.\n2. Você copiou apenas as células do Excel.");
                   return;
               }
+
               setDeliveries(prev => {
-                  const prevString = new Set(prev.map(d => JSON.stringify({d: d.data, r: d.remetente, doc: d.doc})));
+                  // Se for a primeira importação, apaga os dados de exemplo (isDemoData)
+                  const currentData = isDemoData ? [] : prev;
+                  
+                  // Evita duplicatas exatas
+                  const prevString = new Set(currentData.map(d => JSON.stringify({d: d.data, r: d.remetente, doc: d.doc})));
                   const uniqueNew = parsedData.filter(d => !prevString.has(JSON.stringify({d: d.data, r: d.remetente, doc: d.doc})));
-                  return [...prev, ...uniqueNew];
+                  
+                  return [...currentData, ...uniqueNew];
               });
+              
+              if (isDemoData) setIsDemoData(false); // Desativa modo demo
+              
               setImportForm({ ...importForm, textData: '' });
-              alert(`${parsedData.length} registros importados!`);
+              alert(`${parsedData.length} registros importados com sucesso!`);
           };
 
           const handleSaveDelivery = async (e) => {
             e.preventDefault();
+            
+            // Limpa dados demo na primeira inserção manual também
+            let currentData = deliveries;
+            if (isDemoData) {
+                currentData = [];
+                setIsDemoData(false);
+            }
+
             const newEntry = {
               ...newDeliveryForm,
               remetente: newDeliveryForm.remetente.toUpperCase(),
@@ -300,7 +313,7 @@
                 return updated;
               });
             } else {
-              setDeliveries(prev => [newEntry, ...prev]);
+              setDeliveries([...currentData, newEntry]); // Usa o array limpo se era demo
               try { await addDoc(collection(db, "entregas"), newEntry); } catch (e) {}
             }
             setIsModalOpen(false);
@@ -491,7 +504,7 @@
                   {activeTab === 'list' ? (
                     <div className="space-y-6 animate-in fade-in duration-500">
                       
-                      {/* CARDS RESTAURADOS (Estilo Large Icon) */}
+                      {/* CARDS DE MÉTRICAS */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                           <StatCard icon={Package} label={`Total ${viewYear}`} value={stats.total} subtext="Entregas neste ano" color="blue" />
                           <StatCard icon={Users} label="Setor Top" value={stats.topSectors[0]?.name || '-'} subtext={`${stats.topSectors[0]?.value || 0} recebimentos`} color="teal" />
@@ -719,4 +732,5 @@
     </script>
 </body>
 </html>
+
 
