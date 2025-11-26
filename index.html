@@ -17,32 +17,26 @@
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Estilos Sazonais para os Botões de Mês */
-        .season-summer { 
-            background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); 
-            border-left: 4px solid #f97316; 
-            color: #9a3412;
-        }
-        .season-autumn { 
-            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); 
-            border-left: 4px solid #ef4444; 
-            color: #991b1b;
-        }
-        .season-winter { 
-            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); 
-            border-left: 4px solid #3b82f6; 
-            color: #1e40af;
-        }
-        .season-spring { 
-            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); 
-            border-left: 4px solid #22c55e; 
-            color: #166534;
-        }
+        /* Tooltip Customizado */
+        .group:hover .group-hover\:block { display: block; }
         
-        /* Efeito de Hover e Ativo */
+        /* Estilos Sazonais para os Botões de Mês */
+        .season-summer { background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border-left: 4px solid #f97316; color: #9a3412; }
+        .season-autumn { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-left: 4px solid #ef4444; color: #991b1b; }
+        .season-winter { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-left: 4px solid #3b82f6; color: #1e40af; }
+        .season-spring { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-left: 4px solid #22c55e; color: #166534; }
+        
         .season-btn { position: relative; overflow: hidden; transition: all 0.2s ease; }
         .season-btn:hover { transform: translateX(2px); }
         .season-btn-active { transform: scale(1.02) translateX(4px); box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.1); font-weight: 700; z-index: 10; }
+
+        /* Estilo de Impressão */
+        @media print {
+            body * { visibility: hidden; }
+            #print-section, #print-section * { visibility: visible; }
+            #print-section { position: absolute; left: 0; top: 0; width: 100%; background: white; padding: 20px; }
+            .no-print { display: none !important; }
+        }
     </style>
 
     <!-- Import Map -->
@@ -80,7 +74,7 @@
           FileText, LayoutDashboard, AlertCircle, Download, X, CheckCircle2,
           Calendar as CalendarIcon, UserCheck, Search as SearchIcon, AlertTriangle,
           Menu, Plus, Save, Edit3, Clock, CalendarDays, ChevronDown, History, ClipboardList, FileSpreadsheet,
-          Sun, CloudRain, Snowflake, Leaf, CloudLightning, Umbrella
+          Sun, CloudRain, Snowflake, Leaf, CloudLightning, Umbrella, Printer, HelpCircle, ArrowUp, ArrowDown
         } from 'lucide-react';
 
         // --- Configuração Firebase ---
@@ -99,12 +93,23 @@
 
         const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#6366f1', '#ec4899'];
 
-        // --- Dados de Exemplo (Serão apagados ao importar) ---
+        // --- Dados Iniciais ---
         const INITIAL_DATA = [
-          { data: '01/01/2025', remetente: 'EXEMPLO', transportadora: 'TESTE', doc: '000000', entreguePara: 'Fulano', quemEntregou: '', setor: 'TESTE', obs: 'Estes dados são apenas ilustrativos.' }
+          { data: '02/01/2025', remetente: 'LUISA', transportadora: '****', doc: '1001815000', entreguePara: 'Paulo cunha', quemEntregou: '', setor: 'P&D', obs: 'Entregue em mãos!' },
+          { data: '03/01/2025', remetente: 'HENRIPRINT GRAFICA', transportadora: 'SEDEX', doc: 'AA812420554BR', entreguePara: 'Jhonatas Silva', quemEntregou: '', setor: 'COMPRAS', obs: 'Deixado em sua mesa!' },
+          { data: '03/02/2025', remetente: 'MAIS MU', transportadora: '****', doc: '****', entreguePara: 'Aline Emerenciano', quemEntregou: '', setor: 'SEL', obs: '' },
+          { data: '05/03/2025', remetente: 'ORIGIN', transportadora: 'FEDEX', doc: '285780863096', entreguePara: 'Priscila Zaccardelli', quemEntregou: '', setor: 'COMPRAS', obs: '' },
+          { data: '01/04/2025', remetente: 'CARLOS SARMIENTO', transportadora: 'DHL', doc: '4938879013', entreguePara: 'Maria Bernardes', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue para Maria!' },
+          { data: '05/05/2025', remetente: 'COLOR ANDINA FOODS', transportadora: 'SEDEX', doc: 'AC534888354BR', entreguePara: 'Priscila', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
+          { data: '02/06/2025', remetente: 'DOHLER AMERICA', transportadora: 'SEDEX', doc: 'AC664235915BR', entreguePara: 'Michelle Silva', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
+          { data: '01/07/2025', remetente: 'ZHANGYU', transportadora: 'FEDEX', doc: '*', entreguePara: 'Jessica Souza', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
+          { data: '01/08/2025', remetente: 'DUX COMPANY', transportadora: '*', doc: '*', entreguePara: 'Amanda', quemEntregou: '', setor: 'LABORATÓRIO', obs: 'Sem a/c entregue para Amanda!' },
+          { data: '01/09/2025', remetente: 'NOVAPROM', transportadora: 'SEDEX', doc: 'OY585202177BR', entreguePara: 'MICHELLE SILVA', quemEntregou: '', setor: 'COMPRAS', obs: 'entregue em mãos!' },
+          { data: '01/10/2025', remetente: 'HUBEI XINGFA', transportadora: 'DHL', doc: '-', entreguePara: 'MARCELO PRAIA', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
+          { data: '03/11/2025', remetente: 'RENATA AMARAL', transportadora: '-', doc: '-', entreguePara: 'NATHALIA MEDEIROS', quemEntregou: '', setor: 'MANUTENÇÃO', obs: 'Entregue em mãos!' },
         ];
 
-        // --- Configuração dos Meses e Estações ---
+        // --- Configuração dos Meses ---
         const MONTHS_CONFIG = [
             { id: '01', name: 'Janeiro', season: 'summer', icon: Sun, color: 'orange' },
             { id: '02', name: 'Fevereiro', season: 'summer', icon: Sun, color: 'orange' },
@@ -120,71 +125,15 @@
             { id: '12', name: 'Dezembro', season: 'summer', icon: Sun, color: 'orange' },
         ];
 
-        function App() {
-          const [deliveries, setDeliveries] = useState(INITIAL_DATA);
-          const [isDemoData, setIsDemoData] = useState(true); // Controle de dados de exemplo
-          const [searchTerm, setSearchTerm] = useState('');
-          const [activeTab, setActiveTab] = useState('list'); 
-          const [dragActive, setDragActive] = useState(false);
-          const [uploadStats, setUploadStats] = useState({ count: 0, show: false });
-          const [quickFilter, setQuickFilter] = useState('ALL');
-          
-          // Seleção de Mês Automática
-          const currentMonthIndex = new Date().getMonth(); 
-          const currentMonthId = String(currentMonthIndex + 1).padStart(2, '0');
-          const [selectedMonth, setSelectedMonth] = useState(currentMonthId); 
-
-          // Gestão de Ano
-          const [currentYear, setCurrentYear] = useState(2025);
-          const [viewYear, setViewYear] = useState(2025);
-          const [showNewYearModal, setShowNewYearModal] = useState(false);
-          
-          // UI Modals
-          const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-          const [isModalOpen, setIsModalOpen] = useState(false); 
-          const [isImportModalOpen, setIsImportModalOpen] = useState(false); 
-          const [editingIndex, setEditingIndex] = useState(null);
-          
-          // Formulários
-          const [newDeliveryForm, setNewDeliveryForm] = useState({
-            data: '', remetente: '', transportadora: '', doc: '', entreguePara: '', quemEntregou: '', setor: '', obs: ''
-          });
-
-          const [importForm, setImportForm] = useState({
-            month: currentMonthId,
-            textData: ''
-          });
-
-          // Carregar dados (Simulação Firebase)
-          useEffect(() => {
-            const fetchData = async () => {
-              try {
-                const q = query(collection(db, "entregas"), orderBy("data", "desc"));
-                const querySnapshot = await getDocs(q);
-                const loadedData = [];
-                querySnapshot.forEach((doc) => {
-                  loadedData.push({ id: doc.id, ...doc.data() });
-                });
-                if (loadedData.length > 0) {
-                  setDeliveries(loadedData);
-                  setIsDemoData(false); // Dados reais encontrados
-                }
-              } catch (e) {
-                // console.log("Modo offline ou erro:", e);
-              }
-            };
-            fetchData();
-          }, []);
-
-          // --- Helpers ---
-          const parseDateYear = (dateStr) => {
+        // --- Helpers Globais ---
+        const parseDateYear = (dateStr) => {
              if (!dateStr) return 0;
              if (dateStr.includes('/')) return parseInt(dateStr.split('/')[2]);
              if (dateStr.includes('-')) return parseInt(dateStr.split('-')[0]);
              return 0;
-          };
+        };
 
-          const getSectorStyle = (sector) => {
+        const getSectorStyle = (sector) => {
             if (!sector) return 'text-slate-500 bg-slate-100';
             const s = sector.toUpperCase();
             if (s.includes('LAB')) return 'text-teal-600 bg-teal-50';
@@ -193,15 +142,24 @@
             if (s.includes('MANUT')) return 'text-orange-600 bg-orange-50';
             if (s.includes('VENDAS')) return 'text-emerald-600 bg-emerald-50';
             return 'text-slate-500 bg-slate-100';
-          };
+        };
 
-          // --- Parser Inteligente e Robusto ---
-          const parsePastedText = (text) => {
+        const getCarrierStyle = (c) => {
+            if (!c) return '';
+            c = c.toUpperCase();
+            if (c.includes('SEDEX')) return 'text-yellow-600 bg-yellow-50 border-yellow-100';
+            if (c.includes('FEDEX')) return 'text-purple-600 bg-purple-50 border-purple-100';
+            if (c.includes('DHL')) return 'text-red-600 bg-red-50 border-red-100';
+            return 'text-slate-500 bg-slate-50 border-slate-100';
+        };
+
+        const getObsAlert = (obs) => obs && (obs.toLowerCase().includes('sem a/c') || obs.toLowerCase().includes('retirou')) ? 'alert' : 'normal';
+
+        const parsePastedText = (text) => {
             const lines = text.split('\n');
             const newDeliveries = [];
             
-            // Detecta separador na primeira linha de dados válida
-            let separator = '\t'; // Padrão Excel
+            let separator = '\t'; 
             for(let line of lines) {
                 const trimmed = line.trim();
                 if(trimmed && !trimmed.match(/^\d{2} DE/) && !trimmed.toLowerCase().startsWith('entrega')) {
@@ -217,23 +175,18 @@
             lines.forEach(line => {
               const cleanLine = line.trim();
               if (!cleanLine) return;
-              // Ignora cabeçalhos
               if (cleanLine.match(/^\d{2} DE [A-ZÇ]+ \([A-Z]+\)/i)) return;
               if (cleanLine.toLowerCase().startsWith('entrega')) return;
 
               const columns = cleanLine.split(separator);
               
-              // Validação flexível de data na primeira coluna
               const col0 = columns[0] ? columns[0].trim() : '';
               
-              // Regex aceita: YYYY-MM-DD ou D/M/YYYY ou DD/MM/YYYY
               if (col0 && (col0.match(/^\d{4}-\d{1,2}-\d{1,2}/) || col0.match(/^\d{1,2}\/\d{1,2}\/\d{2,4}/))) {
                 let dateStr = col0;
-                
-                // Padronizar data para DD/MM/YYYY se estiver YYYY-MM-DD
                 if (dateStr.includes('-')) {
                     const parts = dateStr.split('-');
-                    if(parts[0].length === 4) { // YYYY-MM-DD
+                    if(parts[0].length === 4) { 
                         dateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
                     }
                 }
@@ -248,7 +201,7 @@
                   transportadora: cleanTransp,
                   doc: columns[3]?.trim() || '-',
                   entreguePara: columns[4]?.trim() || '-',
-                  quemEntregou: '', // Histórico não tem esse dado
+                  quemEntregou: '', 
                   setor: cleanSetor,
                   obs: columns.slice(6).join(' ').trim().replace(/"/g, '') || ''
                 });
@@ -257,30 +210,70 @@
             return newDeliveries;
           };
 
-          // --- Handlers ---
+        function App() {
+          const [deliveries, setDeliveries] = useState(INITIAL_DATA);
+          const [isDemoData, setIsDemoData] = useState(true); 
+          const [searchTerm, setSearchTerm] = useState('');
+          const [activeTab, setActiveTab] = useState('list'); 
+          const [dragActive, setDragActive] = useState(false);
+          const [uploadStats, setUploadStats] = useState({ count: 0, show: false });
+          const [quickFilter, setQuickFilter] = useState('ALL');
+          
+          const currentMonthIndex = new Date().getMonth(); 
+          const currentMonthId = String(currentMonthIndex + 1).padStart(2, '0');
+          const [selectedMonth, setSelectedMonth] = useState(currentMonthId); 
+          const [isMonthSidebarOpen, setIsMonthSidebarOpen] = useState(false); 
+
+          const [currentYear, setCurrentYear] = useState(2025);
+          const [viewYear, setViewYear] = useState(2025);
+          const [showNewYearModal, setShowNewYearModal] = useState(false);
+          
+          const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+          const [isModalOpen, setIsModalOpen] = useState(false); 
+          const [isImportModalOpen, setIsImportModalOpen] = useState(false); 
+          const [editingIndex, setEditingIndex] = useState(null);
+          
+          const [newDeliveryForm, setNewDeliveryForm] = useState({
+            data: '', remetente: '', transportadora: '', doc: '', entreguePara: '', quemEntregou: '', setor: '', obs: ''
+          });
+
+          const [importForm, setImportForm] = useState({
+            month: currentMonthId,
+            textData: ''
+          });
+
+          useEffect(() => {
+            const fetchData = async () => {
+              try {
+                const q = query(collection(db, "entregas"), orderBy("createdAt", "desc")); // Ordena por criação para mostrar novos primeiro
+                const querySnapshot = await getDocs(q);
+                const loadedData = [];
+                querySnapshot.forEach((doc) => {
+                  loadedData.push({ id: doc.id, ...doc.data() });
+                });
+                if (loadedData.length > 0) {
+                  setDeliveries(loadedData);
+                  setIsDemoData(false); 
+                }
+              } catch (e) { }
+            };
+            fetchData();
+          }, []);
+
           const handleProcessImport = async () => {
               if (!importForm.textData) return;
-              
               const parsedData = parsePastedText(importForm.textData);
-              
               if (parsedData.length === 0) {
-                  alert("Ops! Não consegui ler nenhum dado válido. \n\nVerifique se:\n1. A primeira coluna é a DATA.\n2. Você copiou apenas as células do Excel.");
+                  alert("Ops! Não consegui ler nenhum dado válido.");
                   return;
               }
-
               setDeliveries(prev => {
-                  // Se for a primeira importação, apaga os dados de exemplo (isDemoData)
                   const currentData = isDemoData ? [] : prev;
-                  
-                  // Evita duplicatas exatas
                   const prevString = new Set(currentData.map(d => JSON.stringify({d: d.data, r: d.remetente, doc: d.doc})));
                   const uniqueNew = parsedData.filter(d => !prevString.has(JSON.stringify({d: d.data, r: d.remetente, doc: d.doc})));
-                  
-                  return [...currentData, ...uniqueNew];
+                  return [...uniqueNew, ...currentData]; 
               });
-              
-              if (isDemoData) setIsDemoData(false); // Desativa modo demo
-              
+              if (isDemoData) setIsDemoData(false);
               setImportForm({ ...importForm, textData: '' });
               alert(`${parsedData.length} registros importados com sucesso!`);
           };
@@ -288,7 +281,6 @@
           const handleSaveDelivery = async (e) => {
             e.preventDefault();
             
-            // Limpa dados demo na primeira inserção manual também
             let currentData = deliveries;
             if (isDemoData) {
                 currentData = [];
@@ -313,13 +305,13 @@
                 return updated;
               });
             } else {
-              setDeliveries([...currentData, newEntry]); // Usa o array limpo se era demo
+              // Adiciona no INÍCIO do array para aparecer primeiro na lista
+              setDeliveries([newEntry, ...currentData]);
               try { await addDoc(collection(db, "entregas"), newEntry); } catch (e) {}
             }
             setIsModalOpen(false);
           };
 
-          // --- UI Helpers ---
           const handleOpenNew = () => {
             setEditingIndex(null);
             setNewDeliveryForm({
@@ -343,7 +335,10 @@
              setShowNewYearModal(false);
           };
 
-          // Filtros
+          const handlePrint = () => {
+              window.print();
+          };
+
           const filteredDeliveries = useMemo(() => {
             let data = deliveries.filter(d => parseDateYear(d.data) === viewYear);
             
@@ -367,15 +362,20 @@
               data = data.filter(d => Object.values(d).some(val => String(val).toLowerCase().includes(lowerSearch)));
             }
             
-            return data.sort((a, b) => {
-                const da = a.data.split('/').reverse().join('');
-                const db = b.data.split('/').reverse().join('');
-                return db.localeCompare(da);
-            });
+            // Ordenação: Prioridade para itens criados manualmente (sem ID do CSV) ou recentes
+            // Mas mantendo agrupamento por data se necessário. Aqui deixamos a ordem natural (novos primeiro)
+            return data; 
           }, [deliveries, searchTerm, quickFilter, selectedMonth, viewYear, activeTab]);
 
+          // Dados para Impressão (Apenas hoje e sem observação)
+          const printData = useMemo(() => {
+              const today = new Date().toLocaleDateString('pt-BR');
+              return deliveries.filter(d => 
+                  d.data === today && (!d.obs || d.obs.trim() === '')
+              );
+          }, [deliveries]);
+
           const stats = useMemo(() => {
-            // Estatisticas usam dados do ANO TODO
             let dataYear = deliveries.filter(d => parseDateYear(d.data) === viewYear);
             const total = dataYear.length;
             const sectorCount = {};
@@ -414,17 +414,6 @@
              return Array.from(years).sort((a,b) => b-a);
           }, [deliveries, currentYear]);
 
-          // UI Components
-          const getCarrierStyle = (c) => {
-            if (!c) return '';
-            c = c.toUpperCase();
-            if (c.includes('SEDEX')) return 'text-yellow-600 bg-yellow-50 border-yellow-100';
-            if (c.includes('FEDEX')) return 'text-purple-600 bg-purple-50 border-purple-100';
-            if (c.includes('DHL')) return 'text-red-600 bg-red-50 border-red-100';
-            return 'text-slate-500 bg-slate-50 border-slate-100';
-          };
-          const getObsAlert = (obs) => obs && (obs.toLowerCase().includes('sem a/c') || obs.toLowerCase().includes('retirou')) ? 'alert' : 'normal';
-
           const StatCard = ({ icon: Icon, label, value, subtext, color = "blue", insight = false }) => (
             <div className={`relative overflow-hidden p-6 rounded-xl border shadow-sm transition-all duration-200 ${insight ? 'bg-gradient-to-br from-indigo-600 to-violet-700 text-white border-transparent' : 'bg-white border-slate-200 hover:shadow-md'}`}>
               {!insight ? (
@@ -447,8 +436,8 @@
 
           return (
             <div className="flex h-screen bg-slate-50 text-slate-800 font-sans overflow-hidden relative">
-              {/* Sidebar */}
-              <div className={`fixed z-40 h-full bg-slate-900 text-white shadow-2xl transition-transform duration-300 flex flex-col w-72 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+              {/* Sidebar Principal */}
+              <div className={`fixed z-40 h-full bg-slate-900 text-white shadow-2xl transition-transform duration-300 flex flex-col w-72 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} no-print`}>
                 <div className="p-6 border-b border-slate-700 flex justify-between items-center whitespace-nowrap">
                   <div className="flex items-center gap-3"><div className="bg-blue-600 p-2 rounded-lg shadow-lg shadow-blue-900/50"><Package className="h-6 w-6 text-white" /></div><div><h1 className="text-lg font-bold leading-tight">Logística</h1><p className="text-xs text-slate-400 font-medium">Controle {viewYear}</p></div></div>
                   <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-white"><X size={20} /></button>
@@ -459,10 +448,10 @@
                 </nav>
                 <div className="p-6 border-t border-slate-800"><p className="text-xs text-slate-400 mb-1">Total Geral ({viewYear})</p><p className="text-3xl font-bold text-white">{stats.total}</p></div>
               </div>
-              {isSidebarOpen && <div className="fixed inset-0 bg-black/40 backdrop-blur-[1px] z-30" onClick={() => setIsSidebarOpen(false)}></div>}
+              {isSidebarOpen && <div className="fixed inset-0 bg-black/40 backdrop-blur-[1px] z-30 no-print" onClick={() => setIsSidebarOpen(false)}></div>}
 
               <main className="flex-1 flex flex-col h-full overflow-hidden relative bg-slate-50/50 w-full">
-                <header className="bg-white border-b border-slate-200 px-4 md:px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center shadow-sm z-10 gap-4">
+                <header className="bg-white border-b border-slate-200 px-4 md:px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center shadow-sm z-10 gap-4 no-print">
                   <div className="flex items-center gap-3 w-full md:w-auto">
                       <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"><Menu size={24} /></button>
                       <h2 className="text-xl font-bold text-slate-800 flex items-center gap-3 truncate">
@@ -473,21 +462,26 @@
                         </div>
                       </h2>
                   </div>
-                  <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+                  <div className="flex items-center gap-3 w-full md:w-auto justify-end flex-col md:flex-row">
                       {viewYear === currentYear && (
                           <button onClick={() => setShowNewYearModal(true)} className="hidden md:flex items-center gap-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg text-xs font-semibold"><CalendarDays size={16} /> Iniciar {currentYear + 1}</button>
                       )}
-                      <button onClick={handleOpenNew} disabled={viewYear !== currentYear} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium shadow-sm transition-all active:scale-95 ${viewYear !== currentYear ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}><Plus size={18} /> <span className="hidden sm:inline">Nova Entrega</span></button>
+                      
+                      {/* Área da Nova Entrega com Seta Indicativa */}
+                      <div className="relative flex flex-col items-center">
+                          <button onClick={handleOpenNew} disabled={viewYear !== currentYear} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium shadow-sm transition-all active:scale-95 ${viewYear !== currentYear ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}><Plus size={18} /> <span className="hidden sm:inline">Nova Entrega</span></button>
+                          {viewYear === currentYear && <div className="absolute top-full mt-1 text-blue-600 animate-bounce flex flex-col items-center"><ArrowUp size={16} className="rotate-180" /><span className="text-[10px] font-bold whitespace-nowrap">Comece aqui</span></div>}
+                      </div>
                   </div>
                 </header>
 
-                {viewYear !== currentYear && (<div className="bg-amber-50 border-b border-amber-100 px-6 py-2 text-xs text-amber-800 flex items-center justify-center gap-2 font-medium"><History size={14} /> Você está visualizando o histórico de {viewYear}. <button onClick={() => setViewYear(currentYear)} className="underline hover:text-amber-900">Voltar para Atual</button></div>)}
+                {viewYear !== currentYear && (<div className="bg-amber-50 border-b border-amber-100 px-6 py-2 text-xs text-amber-800 flex items-center justify-center gap-2 font-medium no-print"><History size={14} /> Você está visualizando o histórico de {viewYear}. <button onClick={() => setViewYear(currentYear)} className="underline hover:text-amber-900">Voltar para Atual</button></div>)}
 
-                <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 space-y-6">
+                <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 space-y-6" id="main-content">
                   
                   {/* Importador em Lote */}
                   {viewYear === currentYear && (
-                      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 no-print">
                           <div className="flex items-center gap-4">
                               <div className="bg-blue-50 p-3 rounded-full"><FileSpreadsheet className="h-6 w-6 text-blue-600" /></div>
                               <div>
@@ -505,57 +499,101 @@
                     <div className="space-y-6 animate-in fade-in duration-500">
                       
                       {/* CARDS DE MÉTRICAS */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
                           <StatCard icon={Package} label={`Total ${viewYear}`} value={stats.total} subtext="Entregas neste ano" color="blue" />
                           <StatCard icon={Users} label="Setor Top" value={stats.topSectors[0]?.name || '-'} subtext={`${stats.topSectors[0]?.value || 0} recebimentos`} color="teal" />
                           <StatCard icon={Truck} label="Transp." value={stats.topCarriers[0]?.name || '-'} subtext={`${stats.topCarriers[0]?.value || 0} entregas`} color="orange" />
                           <StatCard insight value={stats.topSectors[0]?.name || '-'} subtext={`${stats.topSectors[0]?.value} items`} />
                       </div>
 
-                      <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-380px)]">
+                      <div className="flex flex-col lg:flex-row gap-6 h-auto lg:h-[calc(100vh-380px)]">
                       
-                        {/* SIDEBAR DE MESES COM ILUSTRAÇÃO DE FUNDO */}
-                        <div className="lg:w-48 bg-white rounded-xl border border-slate-200 shadow-sm overflow-y-auto flex-shrink-0">
-                            <div className="p-4 border-b border-slate-100">
-                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Meses ({viewYear})</h3>
+                        {/* SIDEBAR DE MESES (Retrátil) */}
+                        {isMonthSidebarOpen && (
+                            <div className="fixed inset-0 lg:static lg:w-48 bg-white z-30 rounded-xl border border-slate-200 shadow-lg lg:shadow-sm overflow-y-auto flex-shrink-0 no-print animate-in">
+                                <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Meses ({viewYear})</h3>
+                                    <button onClick={() => setIsMonthSidebarOpen(false)} className="lg:hidden text-slate-400"><X size={18} /></button>
+                                </div>
+                                <div className="p-2 space-y-1">
+                                    {MONTHS_CONFIG.map((m) => {
+                                        const isActive = selectedMonth === m.id;
+                                        const Icon = m.icon;
+                                        return (
+                                            <button 
+                                                key={m.id}
+                                                onClick={() => { setSelectedMonth(m.id); setIsMonthSidebarOpen(false); }}
+                                                className={`season-btn w-full text-left px-3 py-3 rounded-lg text-sm flex items-center gap-3 
+                                                ${isActive ? `season-btn-active text-slate-800 bg-white season-${m.season}` : 'text-slate-500 hover:bg-slate-50'}`}
+                                            >
+                                                <Icon size={16} className={`${isActive ? `text-${m.color}-600` : 'text-slate-400'} z-10 relative`} />
+                                                <span className="z-10 relative">{m.name}</span>
+                                                {isActive && (<div className="absolute -bottom-1 -right-1 opacity-20 transform rotate-12 pointer-events-none"><Icon size={40} className={`text-${m.color}-600`} /></div>)}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
                             </div>
-                            <div className="p-2 space-y-1">
-                                {MONTHS_CONFIG.map((m) => {
-                                    const isActive = selectedMonth === m.id;
-                                    const Icon = m.icon;
-                                    return (
-                                        <button 
-                                            key={m.id}
-                                            onClick={() => setSelectedMonth(m.id)}
-                                            className={`season-btn w-full text-left px-3 py-3 rounded-lg text-sm flex items-center gap-3 
-                                              ${isActive ? `season-btn-active text-slate-800 bg-white season-${m.season}` : 'text-slate-500 hover:bg-slate-50'}`}
-                                        >
-                                            <Icon size={16} className={`${isActive ? `text-${m.color}-600` : 'text-slate-400'} z-10 relative`} />
-                                            <span className="z-10 relative">{m.name}</span>
-                                            
-                                            {/* Desenho de Fundo (Marca D'água) */}
-                                            {isActive && (
-                                                <div className="absolute -bottom-1 -right-1 opacity-20 transform rotate-12 pointer-events-none">
-                                                    <Icon size={40} className={`text-${m.color}-600`} />
-                                                </div>
-                                            )}
-                                        </button>
-                                    )
-                                })}
-                            </div>
-                        </div>
+                        )}
 
                         {/* TABELA DE DADOS */}
-                        <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-                          <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white gap-4">
-                            <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                                {MONTHS_CONFIG.find(m => m.id === selectedMonth)?.name}
-                                <span className="text-xs font-normal text-slate-400 border border-slate-200 rounded px-2 py-0.5">{filteredDeliveries.length} entregas</span>
-                            </h3>
-                            <div className="relative w-64">
-                              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                              <input type="text" placeholder="Filtrar neste mês..." className="w-full pl-10 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                        <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden h-full">
+                          <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between bg-white gap-4 no-print">
+                            <div className="flex items-center gap-3 w-full sm:w-auto">
+                                <button 
+                                    onClick={() => setIsMonthSidebarOpen(!isMonthSidebarOpen)}
+                                    className="p-2 bg-slate-100 rounded hover:bg-slate-200 flex items-center gap-2 text-sm text-slate-600 font-medium transition-colors"
+                                >
+                                    <CalendarDays size={18} />
+                                    {isMonthSidebarOpen ? 'Ocultar Meses' : 'Mudar Mês'}
+                                </button>
+                                <div className="h-6 w-px bg-slate-200 mx-2 hidden sm:block"></div>
+                                <h3 className="font-bold text-slate-700 flex items-center gap-2 text-sm sm:text-base">
+                                    {MONTHS_CONFIG.find(m => m.id === selectedMonth)?.name}
+                                    <span className="text-xs font-normal text-slate-400 border border-slate-200 rounded px-2 py-0.5 hidden sm:inline-block">{filteredDeliveries.length} entregas</span>
+                                </h3>
                             </div>
+                            <div className="flex gap-3 w-full sm:w-auto">
+                                <button onClick={handlePrint} className="p-2 bg-slate-800 text-white rounded hover:bg-slate-700 text-xs font-medium flex items-center gap-2 whitespace-nowrap" title="Imprimir Pendentes de Hoje">
+                                    <Printer size={14} /> Imprimir Lista do Dia
+                                </button>
+                                <div className="relative w-full sm:w-48">
+                                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                    <input type="text" placeholder="Filtrar..." className="w-full pl-10 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                </div>
+                            </div>
+                          </div>
+
+                          {/* SEÇÃO DE IMPRESSÃO (Visível apenas ao imprimir) */}
+                          <div id="print-section" className="hidden p-8 bg-white">
+                              <div className="flex justify-between items-center mb-6 border-b pb-4">
+                                <h1 className="text-xl font-bold">Relação de Entregas - {new Date().toLocaleDateString()}</h1>
+                                <span className="text-sm text-slate-500">Pendências para assinatura</span>
+                              </div>
+                              <table className="w-full text-xs border-collapse border border-slate-300">
+                                  <thead>
+                                      <tr className="bg-slate-100">
+                                          <th className="border p-2 text-left w-20">Data</th>
+                                          <th className="border p-2 text-left">Remetente</th>
+                                          <th className="border p-2 text-left">Setor</th>
+                                          <th className="border p-2 text-left">Entregue Para</th>
+                                          <th className="border p-2 text-left w-40">Assinatura / Recebido Por</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                      {printData.length > 0 ? printData.map((item, idx) => (
+                                          <tr key={idx}>
+                                              <td className="border p-2">{item.data}</td>
+                                              <td className="border p-2 font-bold">{item.remetente}</td>
+                                              <td className="border p-2">{item.setor}</td>
+                                              <td className="border p-2">{item.entreguePara}</td>
+                                              <td className="border p-2"></td>
+                                          </tr>
+                                      )) : (
+                                          <tr><td colSpan="5" className="border p-4 text-center italic">Nenhuma entrega pendente para hoje.</td></tr>
+                                      )}
+                                  </tbody>
+                              </table>
                           </div>
 
                           <div className="flex-1 overflow-auto bg-white">
@@ -575,7 +613,7 @@
                                   const isPending = item.entreguePara === '-' || !item.entreguePara;
                                   return (
                                   <tr key={idx} className="hover:bg-slate-50 transition-colors group">
-                                    <td className="px-6 py-3 align-top">
+                                    <td className="px-6 py-3 align-top w-40">
                                       <div className="flex flex-col gap-1">
                                           <span className="text-xs font-bold text-slate-700">{item.data}</span>
                                           <div className="flex items-center gap-2"><span className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${getCarrierStyle(item.transportadora)}`}>{item.transportadora}</span></div>
@@ -583,29 +621,30 @@
                                       </div>
                                     </td>
                                     <td className="px-6 py-3 align-top">
-                                       <div className="font-medium text-slate-800 text-xs group-hover:text-blue-700 transition-colors">{item.remetente}</div>
+                                       <div className="font-medium text-slate-800 text-sm group-hover:text-blue-700 transition-colors mb-1.5">{item.remetente}</div>
                                        {item.obs && (
-                                            <div className={`mt-1 text-[10px] px-1.5 py-1 rounded border max-w-[180px] leading-tight ${obsAlert === 'alert' ? 'bg-orange-50 text-orange-800 border-orange-100 font-medium' : 'bg-slate-50 text-slate-500 border-slate-100 italic'}`}>
-                                                {obsAlert === 'alert' && <AlertTriangle size={10} className="inline mr-1 text-orange-500" />}{item.obs}
+                                            <div className={`text-xs px-2 py-1.5 rounded border inline-block max-w-md leading-snug font-medium ${obsAlert === 'alert' ? 'bg-orange-50 text-orange-800 border-orange-100' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                                                {obsAlert === 'alert' && <AlertTriangle size={12} className="inline mr-1 -mt-0.5 text-orange-500" />}
+                                                {item.obs}
                                             </div>
                                         )}
                                     </td>
-                                    <td className="px-6 py-3 align-top">
+                                    <td className="px-6 py-3 align-top w-48">
                                        {!isPending ? (
                                          <div className="flex flex-col gap-1">
-                                            <div className="flex items-center gap-1.5"><UserCheck size={12} className="text-emerald-600" /><span className="text-xs font-semibold text-slate-700">{item.entreguePara}</span></div>
+                                            <div className="flex items-center gap-1.5"><UserCheck size={14} className="text-emerald-600" /><span className="text-xs font-semibold text-slate-700">{item.entreguePara}</span></div>
                                             {item.quemEntregou && item.quemEntregou !== '-' && (
                                                 <div className="flex items-center gap-1.5 ml-0.5"><span className="text-[10px] text-slate-400">Por: {item.quemEntregou}</span></div>
                                             )}
                                          </div>
                                        ) : (
-                                         <div className="flex items-center gap-1.5 opacity-60"><Clock size={12} className="text-slate-400" /><span className="text-xs font-medium text-slate-500 italic">Pendente</span></div>
+                                         <div className="flex items-center gap-1.5 opacity-60"><Clock size={14} className="text-slate-400" /><span className="text-xs font-medium text-slate-500 italic">Pendente</span></div>
                                        )}
                                     </td>
-                                    <td className="px-6 py-3 align-top">
+                                    <td className="px-6 py-3 align-top w-32">
                                         <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${getSectorStyle(item.setor)}`}>{item.setor}</span>
                                     </td>
-                                    <td className="px-6 py-3 align-middle text-right">
+                                    <td className="px-6 py-3 align-middle text-right w-10">
                                        {viewYear === currentYear && (
                                            <button onClick={() => handleOpenEdit(item)} className="p-1.5 rounded hover:bg-blue-50 text-slate-300 hover:text-blue-600 transition-all" title="Editar"><Edit3 size={16} /></button>
                                        )}
@@ -691,17 +730,53 @@
                     </div>
                     <form onSubmit={handleSaveDelivery} className="p-6 space-y-4">
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Data</label><input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="DD/MM/AAAA" value={newDeliveryForm.data} onChange={e => setNewDeliveryForm({...newDeliveryForm, data: e.target.value})} /></div>
-                        <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Rastreio / Doc</label><input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Código" value={newDeliveryForm.doc} onChange={e => setNewDeliveryForm({...newDeliveryForm, doc: e.target.value})} /></div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help group relative">
+                                Data <HelpCircle size={12} className="text-slate-400"/>
+                                <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50 text-center">Data que a encomenda chegou na empresa.</div>
+                            </label>
+                            <input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="DD/MM/AAAA" value={newDeliveryForm.data} onChange={e => setNewDeliveryForm({...newDeliveryForm, data: e.target.value})} />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help group relative">
+                                Rastreio / Doc <HelpCircle size={12} className="text-slate-400"/>
+                                <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50 text-center">Código de rastreio dos Correios ou número da Nota Fiscal.</div>
+                            </label>
+                            <input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Código" value={newDeliveryForm.doc} onChange={e => setNewDeliveryForm({...newDeliveryForm, doc: e.target.value})} />
+                        </div>
                       </div>
-                      <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Remetente</label><input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.remetente} onChange={e => setNewDeliveryForm({...newDeliveryForm, remetente: e.target.value})} /></div>
+                      <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help group relative">
+                              Remetente <HelpCircle size={12} className="text-slate-400"/>
+                              <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50 text-center">Nome da empresa ou pessoa que enviou a encomenda.</div>
+                          </label>
+                          <input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.remetente} onChange={e => setNewDeliveryForm({...newDeliveryForm, remetente: e.target.value})} />
+                      </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Transportadora</label><select className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white" value={newDeliveryForm.transportadora} onChange={e => setNewDeliveryForm({...newDeliveryForm, transportadora: e.target.value})}><option value="">Selecione...</option><option value="SEDEX">Correios / Sedex</option><option value="PAC">Correios / PAC</option><option value="FEDEX">FedEx</option><option value="DHL">DHL</option><option value="JADLOG">Jadlog</option><option value="MOTOBOY">Motoboy</option><option value="OUTROS">Outros</option></select></div>
-                        <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Setor</label><input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.setor} onChange={e => setNewDeliveryForm({...newDeliveryForm, setor: e.target.value})} /></div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help group relative">
+                                Setor <HelpCircle size={12} className="text-slate-400"/>
+                                <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50 text-center">Departamento de destino (Ex: Compras, RH, TI).</div>
+                            </label>
+                            <input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.setor} onChange={e => setNewDeliveryForm({...newDeliveryForm, setor: e.target.value})} />
+                        </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
-                         <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Entregue Para</label><input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.entreguePara} onChange={e => setNewDeliveryForm({...newDeliveryForm, entreguePara: e.target.value})} /></div>
-                         <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Entregue Por</label><input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.quemEntregou} onChange={e => setNewDeliveryForm({...newDeliveryForm, quemEntregou: e.target.value})} /></div>
+                         <div className="space-y-1">
+                             <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help group relative">
+                                 Entregue Para <HelpCircle size={12} className="text-slate-400"/>
+                                 <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50 text-center">Quem recebeu a encomenda (assinou). Deixe em branco se pendente.</div>
+                             </label>
+                             <input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.entreguePara} onChange={e => setNewDeliveryForm({...newDeliveryForm, entreguePara: e.target.value})} />
+                         </div>
+                         <div className="space-y-1">
+                             <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help group relative">
+                                 Entregue Por <HelpCircle size={12} className="text-slate-400"/>
+                                 <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50 text-center">Funcionário da logística que realizou a entrega.</div>
+                             </label>
+                             <input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.quemEntregou} onChange={e => setNewDeliveryForm({...newDeliveryForm, quemEntregou: e.target.value})} />
+                         </div>
                       </div>
                       <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Observações</label><textarea className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-20 resize-none" value={newDeliveryForm.obs} onChange={e => setNewDeliveryForm({...newDeliveryForm, obs: e.target.value})}></textarea></div>
                       <div className="pt-4 flex gap-3"><button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 font-medium">Cancelar</button><button type="submit" className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"><Save size={18} /> {editingIndex !== null ? 'Atualizar' : 'Salvar Entrada'}</button></div>
