@@ -66,7 +66,7 @@
         import React, { useState, useMemo, useEffect } from 'react';
         import ReactDOM from 'react-dom/client';
         import { initializeApp } from "firebase/app";
-        import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "firebase/firestore";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, updateDoc, doc, onSnapshot } from "firebase/firestore";
         import { 
           BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, 
           PieChart, Pie, Cell 
@@ -76,7 +76,7 @@
           FileText, LayoutDashboard, AlertCircle, Download, X, CheckCircle2,
           Calendar as CalendarIcon, UserCheck, Search as SearchIcon, AlertTriangle,
           Menu, Plus, Save, Edit3, Clock, CalendarDays, ChevronDown, History, ClipboardList, FileSpreadsheet,
-          Sun, CloudRain, Snowflake, Leaf, CloudLightning, Umbrella, Printer, HelpCircle, ArrowUp, ArrowDown, Filter
+          Sun, CloudRain, Snowflake, Leaf, CloudLightning, Umbrella, Printer, HelpCircle, ArrowUp, ArrowDown
         } from 'lucide-react';
 
         // --- Configuração Firebase ---
@@ -95,21 +95,8 @@
 
         const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#6366f1', '#ec4899'];
 
-        // --- Dados Iniciais ---
-        const INITIAL_DATA = [
-          { data: '02/01/2025', remetente: 'LUISA', transportadora: '****', doc: '1001815000', entreguePara: 'Paulo cunha', quemEntregou: '', setor: 'P&D', obs: 'Entregue em mãos!' },
-          { data: '03/01/2025', remetente: 'HENRIPRINT GRAFICA', transportadora: 'SEDEX', doc: 'AA812420554BR', entreguePara: 'Jhonatas Silva', quemEntregou: '', setor: 'COMPRAS', obs: 'Deixado em sua mesa!' },
-          { data: '03/02/2025', remetente: 'MAIS MU', transportadora: '****', doc: '****', entreguePara: 'Aline Emerenciano', quemEntregou: '', setor: 'SEL', obs: '' },
-          { data: '05/03/2025', remetente: 'ORIGIN', transportadora: 'FEDEX', doc: '285780863096', entreguePara: 'Priscila Zaccardelli', quemEntregou: '', setor: 'COMPRAS', obs: '' },
-          { data: '01/04/2025', remetente: 'CARLOS SARMIENTO', transportadora: 'DHL', doc: '4938879013', entreguePara: 'Maria Bernardes', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue para Maria!' },
-          { data: '05/05/2025', remetente: 'COLOR ANDINA FOODS', transportadora: 'SEDEX', doc: 'AC534888354BR', entreguePara: 'Priscila', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
-          { data: '02/06/2025', remetente: 'DOHLER AMERICA', transportadora: 'SEDEX', doc: 'AC664235915BR', entreguePara: 'Michelle Silva', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
-          { data: '01/07/2025', remetente: 'ZHANGYU', transportadora: 'FEDEX', doc: '*', entreguePara: 'Jessica Souza', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
-          { data: '01/08/2025', remetente: 'DUX COMPANY', transportadora: '*', doc: '*', entreguePara: 'Amanda', quemEntregou: '', setor: 'LABORATÓRIO', obs: 'Sem a/c entregue para Amanda!' },
-          { data: '01/09/2025', remetente: 'NOVAPROM', transportadora: 'SEDEX', doc: 'OY585202177BR', entreguePara: 'MICHELLE SILVA', quemEntregou: '', setor: 'COMPRAS', obs: 'entregue em mãos!' },
-          { data: '01/10/2025', remetente: 'HUBEI XINGFA', transportadora: 'DHL', doc: '-', entreguePara: 'MARCELO PRAIA', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
-          { data: '03/11/2025', remetente: 'RENATA AMARAL', transportadora: '-', doc: '-', entreguePara: 'NATHALIA MEDEIROS', quemEntregou: '', setor: 'MANUTENÇÃO', obs: 'Entregue em mãos!' },
-        ];
+        // --- Dados Iniciais (Apenas para fallback) ---
+        const INITIAL_DATA = [];
 
         // --- Configuração dos Meses ---
         const MONTHS_CONFIG = [
@@ -133,6 +120,27 @@
              if (dateStr.includes('/')) return parseInt(dateStr.split('/')[2]);
              if (dateStr.includes('-')) return parseInt(dateStr.split('-')[0]);
              return 0;
+        };
+
+        // --- Função Robusta de Comparação de Datas (DD/MM/AAAA) ---
+        const compareDates = (a, b) => {
+            // Tenta converter DD/MM/YYYY para objeto Date
+            const parse = (str) => {
+                if (!str) return new Date(0);
+                const parts = str.split('/');
+                if (parts.length === 3) {
+                    // Mês em JS é 0-11
+                    return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                }
+                // Se for YYYY-MM-DD
+                if (str.includes('-')) return new Date(str);
+                return new Date(0);
+            };
+
+            const dateA = parse(a);
+            const dateB = parse(b);
+
+            return dateB.getTime() - dateA.getTime(); // Decrescente (Mais recente primeiro)
         };
 
         const getSectorStyle = (sector) => {
@@ -213,18 +221,9 @@
           };
 
         function App() {
-          const [deliveries, setDeliveries] = useState(() => {
-              const saved = localStorage.getItem('logistica_data_2025');
-              return saved ? JSON.parse(saved) : INITIAL_DATA;
-          });
-
-          const [isDemoData, setIsDemoData] = useState(() => {
-             return !localStorage.getItem('logistica_data_2025');
-          });
-
+          const [deliveries, setDeliveries] = useState([]); // Inicia vazio
           const [searchTerm, setSearchTerm] = useState('');
           const [activeTab, setActiveTab] = useState('list'); 
-          const [dragActive, setDragActive] = useState(false);
           const [uploadStats, setUploadStats] = useState({ count: 0, show: false });
           const [quickFilter, setQuickFilter] = useState('ALL');
           
@@ -240,12 +239,11 @@
           const [isSidebarOpen, setIsSidebarOpen] = useState(false);
           const [isModalOpen, setIsModalOpen] = useState(false); 
           const [isImportModalOpen, setIsImportModalOpen] = useState(false); 
-          const [editingIndex, setEditingIndex] = useState(null);
+          const [editingId, setEditingId] = useState(null);
           
-          // Novo: Estado para Data de Impressão
-          const todayISO = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD para input
+          const todayISO = new Date().toISOString().split('T')[0]; 
           const [printDate, setPrintDate] = useState(todayISO);
-          const [onlyPendingPrint, setOnlyPendingPrint] = useState(true); // Checkbox para "Apenas Pendentes"
+          const [onlyPendingPrint, setOnlyPendingPrint] = useState(true);
 
           const [newDeliveryForm, setNewDeliveryForm] = useState({
             data: '', remetente: '', transportadora: '', doc: '', entreguePara: '', quemEntregou: '', setor: '', obs: ''
@@ -256,25 +254,18 @@
             textData: ''
           });
 
+          // --- FIREBASE REALTIME LISTENER ---
           useEffect(() => {
-              localStorage.setItem('logistica_data_2025', JSON.stringify(deliveries));
-          }, [deliveries]);
-
-          useEffect(() => {
-            const fetchData = async () => {
-              try {
-                const q = query(collection(db, "entregas"), orderBy("createdAt", "desc")); 
-                const querySnapshot = await getDocs(q);
-                const loadedData = [];
-                querySnapshot.forEach((doc) => {
-                  loadedData.push({ id: doc.id, ...doc.data() });
-                });
-                if (loadedData.length > 0) {
-                  // Prioridade para dados da nuvem se existirem
-                }
-              } catch (e) { }
-            };
-            fetchData();
+            // Ordena por criação para garantir estabilidade no recebimento
+            const q = query(collection(db, "entregas"), orderBy("createdAt", "desc"));
+            const unsubscribe = onSnapshot(q, (querySnapshot) => {
+              const loadedData = [];
+              querySnapshot.forEach((doc) => {
+                loadedData.push({ id: doc.id, ...doc.data() });
+              });
+              setDeliveries(loadedData);
+            });
+            return () => unsubscribe();
           }, []);
 
           const handleProcessImport = async () => {
@@ -284,25 +275,23 @@
                   alert("Ops! Não consegui ler nenhum dado válido.");
                   return;
               }
-              setDeliveries(prev => {
-                  const currentData = isDemoData ? [] : prev;
-                  const prevString = new Set(currentData.map(d => JSON.stringify({d: d.data, r: d.remetente, doc: d.doc})));
-                  const uniqueNew = parsedData.filter(d => !prevString.has(JSON.stringify({d: d.data, r: d.remetente, doc: d.doc})));
-                  return [...uniqueNew, ...currentData]; 
+
+              // Importação em lote
+              const batchPromises = parsedData.map(async (item) => {
+                 try {
+                     await addDoc(collection(db, "entregas"), {
+                         ...item,
+                         createdAt: new Date().toISOString()
+                     });
+                 } catch(e) {}
               });
-              if (isDemoData) setIsDemoData(false);
+              
               setImportForm({ ...importForm, textData: '' });
-              alert(`${parsedData.length} registros importados com sucesso!`);
+              setIsImportModalOpen(false);
           };
 
           const handleSaveDelivery = async (e) => {
             e.preventDefault();
-            
-            let currentData = deliveries;
-            if (isDemoData) {
-                currentData = [];
-                setIsDemoData(false);
-            }
 
             const newEntry = {
               ...newDeliveryForm,
@@ -312,24 +301,26 @@
               doc: newDeliveryForm.doc || '-',
               entreguePara: newDeliveryForm.entreguePara || '-',
               quemEntregou: newDeliveryForm.quemEntregou || '',
-              createdAt: new Date().toISOString()
             };
 
-            if (editingIndex !== null) {
-              setDeliveries(prev => {
-                const updated = [...prev];
-                updated[editingIndex] = newEntry;
-                return updated;
-              });
-            } else {
-              setDeliveries([newEntry, ...currentData]);
-              try { await addDoc(collection(db, "entregas"), newEntry); } catch (e) {}
+            try {
+                if (editingId) {
+                    const docRef = doc(db, "entregas", editingId);
+                    await updateDoc(docRef, newEntry);
+                } else {
+                    await addDoc(collection(db, "entregas"), {
+                        ...newEntry,
+                        createdAt: new Date().toISOString()
+                    });
+                }
+                setIsModalOpen(false);
+            } catch (error) {
+                alert("Erro ao salvar: " + error.message);
             }
-            setIsModalOpen(false);
           };
 
           const handleOpenNew = () => {
-            setEditingIndex(null);
+            setEditingId(null);
             setNewDeliveryForm({
               data: new Date().toLocaleDateString('pt-BR'),
               remetente: '', transportadora: '', doc: '', entreguePara: '', quemEntregou: '', setor: '', obs: ''
@@ -338,8 +329,7 @@
           };
 
           const handleOpenEdit = (item) => {
-            const realIndex = deliveries.indexOf(item);
-            setEditingIndex(realIndex);
+            setEditingId(item.id);
             setNewDeliveryForm({ ...item });
             setIsModalOpen(true);
           };
@@ -378,23 +368,24 @@
               data = data.filter(d => Object.values(d).some(val => String(val).toLowerCase().includes(lowerSearch)));
             }
             
-            return data; 
+            // Ordenação Robusta por DATA (Mais recente no topo)
+            return data.sort((a, b) => compareDates(a.data, b.data)); 
           }, [deliveries, searchTerm, quickFilter, selectedMonth, viewYear, activeTab]);
 
-          // Lógica de Impressão Filtrada por Data Escolhida
           const printData = useMemo(() => {
               if (!printDate) return [];
               const [y, m, d] = printDate.split('-');
-              const formattedPrintDate = `${d}/${m}/${y}`; // Converte YYYY-MM-DD para DD/MM/YYYY
+              const targetDateBR = `${d}/${m}/${y}`; 
 
               return deliveries.filter(item => {
-                  const matchDate = item.data === formattedPrintDate;
-                  if (!matchDate) return false;
+                  const itemDate = item.data.trim();
+                  if (itemDate !== targetDateBR) return false;
+                  
                   if (onlyPendingPrint) {
-                      // Se "Apenas Pendentes" marcado, esconde os que já tem observação (já finalizados)
-                      return !item.obs || item.obs.trim() === '';
+                      const hasObs = item.obs && item.obs.trim().length > 2;
+                      return !hasObs; 
                   }
-                  return true; // Se não marcado, mostra tudo da data
+                  return true;
               });
           }, [deliveries, printDate, onlyPendingPrint]);
 
@@ -485,7 +476,6 @@
                           <button onClick={() => setShowNewYearModal(true)} className="hidden md:flex items-center gap-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg text-xs font-semibold"><CalendarDays size={16} /> Iniciar {currentYear + 1}</button>
                       )}
                       
-                      {/* Área da Nova Entrega com Seta Indicativa */}
                       <div className="relative flex flex-col items-center">
                           <button onClick={handleOpenNew} disabled={viewYear !== currentYear} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium shadow-sm transition-all active:scale-95 ${viewYear !== currentYear ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}><Plus size={18} /> <span className="hidden sm:inline">Nova Entrega</span></button>
                           {viewYear === currentYear && <div className="absolute top-full mt-1 text-blue-600 animate-bounce flex flex-col items-center"><ArrowUp size={16} className="rotate-180" /><span className="text-[10px] font-bold whitespace-nowrap">Comece aqui</span></div>}
@@ -497,7 +487,6 @@
 
                 <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 space-y-6" id="main-content">
                   
-                  {/* Importador em Lote */}
                   {viewYear === currentYear && (
                       <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 no-print">
                           <div className="flex items-center gap-4">
@@ -516,7 +505,6 @@
                   {activeTab === 'list' ? (
                     <div className="space-y-6 animate-in fade-in duration-500 h-full flex flex-col">
                       
-                      {/* CARDS DE MÉTRICAS */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print flex-shrink-0">
                           <StatCard icon={Package} label={`Total ${viewYear}`} value={stats.total} subtext="Entregas neste ano" color="blue" />
                           <StatCard icon={Users} label="Setor Top" value={stats.topSectors[0]?.name || '-'} subtext={`${stats.topSectors[0]?.value || 0} recebimentos`} color="teal" />
@@ -526,7 +514,6 @@
 
                       <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
                       
-                        {/* SIDEBAR DE MESES (Retrátil) */}
                         {isMonthSidebarOpen && (
                             <div className="fixed inset-0 lg:static lg:w-48 bg-white z-30 rounded-xl border border-slate-200 shadow-lg lg:shadow-sm overflow-y-auto flex-shrink-0 no-print animate-in">
                                 <div className="p-4 border-b border-slate-100 flex justify-between items-center">
@@ -554,7 +541,6 @@
                             </div>
                         )}
 
-                        {/* TABELA DE DADOS */}
                         <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden h-full">
                           <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between bg-white gap-4 no-print flex-shrink-0">
                             <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -572,7 +558,6 @@
                                 </h3>
                             </div>
                             <div className="flex gap-3 w-full sm:w-auto items-center">
-                                {/* ÁREA DE IMPRESSÃO */}
                                 <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg p-1">
                                     <input 
                                         type="date" 
@@ -581,16 +566,15 @@
                                         onChange={(e) => setPrintDate(e.target.value)}
                                         title="Selecione a data para imprimir"
                                     />
-                                    <button onClick={handlePrint} className="p-1.5 bg-slate-800 text-white rounded hover:bg-slate-700 flex items-center gap-1 transition-colors" title={`Imprimir Lista de ${printDate.split('-').reverse().join('/')}`}>
+                                    <button onClick={handlePrint} className="p-1.5 bg-slate-800 text-white rounded hover:bg-slate-700 flex items-center gap-1 transition-colors" title="Imprimir">
                                         <Printer size={14} /> 
                                         <span className="text-[10px] font-bold">{printData.length}</span>
                                     </button>
                                 </div>
                                 <div className="flex items-center gap-1">
                                      <input type="checkbox" id="onlyPending" checked={onlyPendingPrint} onChange={(e) => setOnlyPendingPrint(e.target.checked)} className="cursor-pointer accent-blue-600" />
-                                     <label htmlFor="onlyPending" className="text-[10px] text-slate-500 cursor-pointer select-none">Só Pendentes</label>
+                                     <label htmlFor="onlyPending" className="text-[10px] text-slate-500 cursor-pointer select-none">Pendentes</label>
                                 </div>
-
                                 <div className="relative w-full sm:w-40">
                                     <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                     <input type="text" placeholder="Filtrar..." className="w-full pl-10 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
@@ -598,33 +582,32 @@
                             </div>
                           </div>
 
-                          {/* SEÇÃO DE IMPRESSÃO (Visível apenas ao imprimir) */}
                           <div id="print-section" className="hidden p-8 bg-white">
-                              <div className="flex justify-between items-center mb-6 border-b pb-4">
+                              <div className="flex justify-between items-center mb-6 border-b pb-4 border-black">
                                 <h1 className="text-xl font-bold">Relação de Entregas - {printDate.split('-').reverse().join('/')}</h1>
-                                <span className="text-sm text-slate-500">Pendências para assinatura</span>
+                                <span className="text-sm">{onlyPendingPrint ? "Itens Pendentes" : "Relatório Completo do Dia"}</span>
                               </div>
-                              <table className="w-full text-xs border-collapse border border-slate-300">
+                              <table className="w-full text-xs border-collapse border border-black">
                                   <thead>
-                                      <tr className="bg-slate-100">
-                                          <th className="border p-2 text-left w-20">Data</th>
-                                          <th className="border p-2 text-left">Remetente</th>
-                                          <th className="border p-2 text-left">Setor</th>
-                                          <th className="border p-2 text-left">Entregue Para</th>
-                                          <th className="border p-2 text-left w-40">Assinatura / Recebido Por</th>
+                                      <tr>
+                                          <th className="border border-black p-2 text-left w-20">Data</th>
+                                          <th className="border border-black p-2 text-left">Remetente</th>
+                                          <th className="border border-black p-2 text-left">Setor</th>
+                                          <th className="border border-black p-2 text-left">Entregue Para</th>
+                                          <th className="border border-black p-2 text-left w-40">Assinatura / Recebido Por</th>
                                       </tr>
                                   </thead>
                                   <tbody>
                                       {printData.length > 0 ? printData.map((item, idx) => (
                                           <tr key={idx}>
-                                              <td className="border p-2">{item.data}</td>
-                                              <td className="border p-2 font-bold">{item.remetente}</td>
-                                              <td className="border p-2">{item.setor}</td>
-                                              <td className="border p-2">{item.entreguePara}</td>
-                                              <td className="border p-2"></td>
+                                              <td className="border border-black p-2">{item.data}</td>
+                                              <td className="border border-black p-2 font-bold">{item.remetente}</td>
+                                              <td className="border border-black p-2">{item.setor}</td>
+                                              <td className="border border-black p-2">{item.entreguePara}</td>
+                                              <td className="border border-black p-2"></td>
                                           </tr>
                                       )) : (
-                                          <tr><td colSpan="5" className="border p-4 text-center italic">Nenhuma entrega encontrada para esta data.</td></tr>
+                                          <tr><td colSpan="5" className="border border-black p-4 text-center italic">Nenhum registro encontrado para esta data.</td></tr>
                                       )}
                                   </tbody>
                               </table>
@@ -710,116 +693,53 @@
                 </div>
               </main>
 
-              {/* MODAL DE IMPORTAÇÃO EM LOTE */}
               {isImportModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
                   <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden">
                     <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                        <div>
-                            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><FileSpreadsheet className="text-blue-600" /> Importador de Dados</h3>
-                            <p className="text-xs text-slate-500">Cole os dados do seu Excel abaixo.</p>
-                        </div>
+                        <div><h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><FileSpreadsheet className="text-blue-600" /> Importador de Dados</h3><p className="text-xs text-slate-500">Cole os dados do seu Excel abaixo.</p></div>
                         <button onClick={() => setIsImportModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={24} /></button>
                     </div>
-                    
                     <div className="flex-1 p-6 flex flex-col gap-4 overflow-hidden">
                         <div className="flex items-center gap-4">
-                            <div className="w-48">
-                                <label className="text-xs font-semibold text-slate-500 uppercase mb-1 block">Mês de Referência</label>
-                                <select value={importForm.month} onChange={(e) => setImportForm({...importForm, month: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg bg-white text-sm">
-                                    {MONTHS_CONFIG.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                                </select>
-                            </div>
-                            <div className="flex-1 bg-blue-50 text-blue-700 text-xs p-3 rounded-lg border border-blue-100">
-                                <strong>Dica:</strong> O sistema ignora cabeçalhos automaticamente. Cole apenas as células do Excel.
-                            </div>
+                            <div className="w-48"><label className="text-xs font-semibold text-slate-500 uppercase mb-1 block">Mês de Referência</label><select value={importForm.month} onChange={(e) => setImportForm({...importForm, month: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg bg-white text-sm">{MONTHS_CONFIG.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select></div>
+                            <div className="flex-1 bg-blue-50 text-blue-700 text-xs p-3 rounded-lg border border-blue-100"><strong>Dica:</strong> O sistema ignora cabeçalhos automaticamente. Cole apenas as células do Excel.</div>
                         </div>
-
-                        <textarea 
-                            className="flex-1 w-full p-4 border border-slate-300 rounded-xl font-mono text-xs leading-relaxed focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                            placeholder={`Cole aqui suas linhas do Excel...\nExemplo:\n01/01/2025\tEmpresa X\tSedex\t12345\tJoão\tTI\tEntregue\n02/01/2025\tEmpresa Y\tDHL\t54321\tMaria\tRH\t-`}
-                            value={importForm.textData}
-                            onChange={(e) => setImportForm({...importForm, textData: e.target.value})}
-                        ></textarea>
+                        <textarea className="flex-1 w-full p-4 border border-slate-300 rounded-xl font-mono text-xs leading-relaxed focus:ring-2 focus:ring-blue-500 outline-none resize-none" placeholder={`Cole aqui suas linhas do Excel...\nExemplo:\n01/01/2025\tEmpresa X\tSedex\t12345\tJoão\tTI\tEntregue\n02/01/2025\tEmpresa Y\tDHL\t54321\tMaria\tRH\t-`} value={importForm.textData} onChange={(e) => setImportForm({...importForm, textData: e.target.value})}></textarea>
                     </div>
-
-                    <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
-                        <button onClick={() => setIsImportModalOpen(false)} className="px-6 py-3 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors">Cancelar</button>
-                        <div className="flex gap-3">
-                            <button onClick={handleProcessImport} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-lg shadow-blue-900/20 flex items-center gap-2"><CheckCircle2 size={18} /> Processar e Adicionar</button>
-                            <button onClick={() => setIsImportModalOpen(false)} className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-lg shadow-emerald-900/20">Finalizar Importação</button>
-                        </div>
-                    </div>
+                    <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center"><button onClick={() => setIsImportModalOpen(false)} className="px-6 py-3 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors">Cancelar</button><div className="flex gap-3"><button onClick={handleProcessImport} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-lg shadow-blue-900/20 flex items-center gap-2"><CheckCircle2 size={18} /> Processar e Adicionar</button><button onClick={() => setIsImportModalOpen(false)} className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-lg shadow-emerald-900/20">Finalizar Importação</button></div></div>
                   </div>
                 </div>
               )}
 
-              {/* Modal Cadastro Manual */}
               {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
                   <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
                     <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                      <h3 className="text-lg font-bold text-slate-800">{editingIndex !== null ? 'Editar Entrega' : `Nova Entrega ${currentYear}`}</h3>
+                      <h3 className="text-lg font-bold text-slate-800">{editingId !== null ? 'Editar Entrega' : `Nova Entrega ${currentYear}`}</h3>
                       <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={24} /></button>
                     </div>
                     <form onSubmit={handleSaveDelivery} className="p-6 space-y-4">
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1 relative group tooltip-trigger">
-                            <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">
-                                Data <HelpCircle size={12} className="text-slate-400"/>
-                            </label>
-                            <div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Data que a encomenda chegou na portaria.</div>
-                            <input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="DD/MM/AAAA" value={newDeliveryForm.data} onChange={e => setNewDeliveryForm({...newDeliveryForm, data: e.target.value})} />
-                        </div>
-                        <div className="space-y-1 relative group tooltip-trigger">
-                            <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">
-                                Rastreio / Doc <HelpCircle size={12} className="text-slate-400"/>
-                            </label>
-                            <div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Código de rastreio dos Correios ou número da Nota Fiscal.</div>
-                            <input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Código" value={newDeliveryForm.doc} onChange={e => setNewDeliveryForm({...newDeliveryForm, doc: e.target.value})} />
-                        </div>
+                        <div className="space-y-1 relative group tooltip-trigger"><label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">Data <HelpCircle size={12} className="text-slate-400"/></label><div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Data que a encomenda chegou na portaria.</div><input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="DD/MM/AAAA" value={newDeliveryForm.data} onChange={e => setNewDeliveryForm({...newDeliveryForm, data: e.target.value})} /></div>
+                        <div className="space-y-1 relative group tooltip-trigger"><label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">Rastreio / Doc <HelpCircle size={12} className="text-slate-400"/></label><div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Código de rastreio dos Correios ou número da Nota Fiscal.</div><input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Código" value={newDeliveryForm.doc} onChange={e => setNewDeliveryForm({...newDeliveryForm, doc: e.target.value})} /></div>
                       </div>
-                      <div className="space-y-1 relative group tooltip-trigger">
-                          <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">
-                              Remetente <HelpCircle size={12} className="text-slate-400"/>
-                          </label>
-                          <div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Nome da empresa ou pessoa que enviou a encomenda.</div>
-                          <input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.remetente} onChange={e => setNewDeliveryForm({...newDeliveryForm, remetente: e.target.value})} />
-                      </div>
+                      <div className="space-y-1 relative group tooltip-trigger"><label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">Remetente <HelpCircle size={12} className="text-slate-400"/></label><div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Nome da empresa ou pessoa que enviou a encomenda.</div><input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.remetente} onChange={e => setNewDeliveryForm({...newDeliveryForm, remetente: e.target.value})} /></div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Transportadora</label><select className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white" value={newDeliveryForm.transportadora} onChange={e => setNewDeliveryForm({...newDeliveryForm, transportadora: e.target.value})}><option value="">Selecione...</option><option value="SEDEX">Correios / Sedex</option><option value="PAC">Correios / PAC</option><option value="FEDEX">FedEx</option><option value="DHL">DHL</option><option value="JADLOG">Jadlog</option><option value="MOTOBOY">Motoboy</option><option value="OUTROS">Outros</option></select></div>
-                        <div className="space-y-1 relative group tooltip-trigger">
-                            <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">
-                                Setor <HelpCircle size={12} className="text-slate-400"/>
-                            </label>
-                            <div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Departamento de destino (Ex: Compras, RH, TI).</div>
-                            <input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.setor} onChange={e => setNewDeliveryForm({...newDeliveryForm, setor: e.target.value})} />
-                        </div>
+                        <div className="space-y-1 relative group tooltip-trigger"><label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">Setor <HelpCircle size={12} className="text-slate-400"/></label><div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Departamento de destino (Ex: Compras, RH, TI).</div><input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.setor} onChange={e => setNewDeliveryForm({...newDeliveryForm, setor: e.target.value})} /></div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
-                         <div className="space-y-1 relative group tooltip-trigger">
-                             <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">
-                                 Entregue Para <HelpCircle size={12} className="text-slate-400"/>
-                             </label>
-                             <div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Quem recebeu a encomenda (assinou). Deixe em branco se pendente.</div>
-                             <input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.entreguePara} onChange={e => setNewDeliveryForm({...newDeliveryForm, entreguePara: e.target.value})} />
-                         </div>
-                         <div className="space-y-1 relative group tooltip-trigger">
-                             <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">
-                                 Entregue Por <HelpCircle size={12} className="text-slate-400"/>
-                             </label>
-                             <div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Funcionário da logística que realizou a entrega.</div>
-                             <input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.quemEntregou} onChange={e => setNewDeliveryForm({...newDeliveryForm, quemEntregou: e.target.value})} />
-                         </div>
+                         <div className="space-y-1 relative group tooltip-trigger"><label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">Entregue Para <HelpCircle size={12} className="text-slate-400"/></label><div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Quem recebeu a encomenda (assinou). Deixe em branco se pendente.</div><input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.entreguePara} onChange={e => setNewDeliveryForm({...newDeliveryForm, entreguePara: e.target.value})} /></div>
+                         <div className="space-y-1 relative group tooltip-trigger"><label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">Entregue Por <HelpCircle size={12} className="text-slate-400"/></label><div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Funcionário da logística que realizou a entrega.</div><input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.quemEntregou} onChange={e => setNewDeliveryForm({...newDeliveryForm, quemEntregou: e.target.value})} /></div>
                       </div>
                       <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Observações</label><textarea className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-20 resize-none" value={newDeliveryForm.obs} onChange={e => setNewDeliveryForm({...newDeliveryForm, obs: e.target.value})}></textarea></div>
-                      <div className="pt-4 flex gap-3"><button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 font-medium">Cancelar</button><button type="submit" className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"><Save size={18} /> {editingIndex !== null ? 'Atualizar' : 'Salvar Entrada'}</button></div>
+                      <div className="pt-4 flex gap-3"><button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 font-medium">Cancelar</button><button type="submit" className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"><Save size={18} /> {editingId !== null ? 'Atualizar' : 'Salvar Entrada'}</button></div>
                     </form>
                   </div>
                 </div>
               )}
 
-              {/* Modal Iniciar Novo Ano */}
               {showNewYearModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
                   <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
