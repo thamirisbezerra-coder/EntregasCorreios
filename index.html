@@ -30,13 +30,23 @@
         .season-btn:hover { transform: translateX(2px); }
         .season-btn-active { transform: scale(1.02) translateX(4px); box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.1); font-weight: 700; z-index: 10; }
 
-        /* Estilo de Impressão */
+        /* Estilo de Impressão - Força visualização correta */
         @media print {
             body * { visibility: hidden; }
             #print-section, #print-section * { visibility: visible; }
-            #print-section { position: absolute; left: 0; top: 0; width: 100%; background: white; padding: 20px; }
+            #print-section { 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 100%; 
+                background: white !important; 
+                padding: 20px;
+                color: black !important; 
+            }
             .no-print { display: none !important; }
-            /* Força a cor de fundo na impressão */
+            table { width: 100% !important; border-collapse: collapse !important; }
+            th, td { border: 1px solid #000 !important; padding: 8px !important; font-size: 12px !important; }
+            /* Força a cor de fundo na impressão (Chrome/Safari) */
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
     </style>
@@ -124,23 +134,18 @@
 
         // --- Função Robusta de Comparação de Datas (DD/MM/AAAA) ---
         const compareDates = (a, b) => {
-            // Tenta converter DD/MM/YYYY para objeto Date
             const parse = (str) => {
                 if (!str) return new Date(0);
                 const parts = str.split('/');
                 if (parts.length === 3) {
-                    // Mês em JS é 0-11
                     return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
                 }
-                // Se for YYYY-MM-DD
                 if (str.includes('-')) return new Date(str);
                 return new Date(0);
             };
-
             const dateA = parse(a);
             const dateB = parse(b);
-
-            return dateB.getTime() - dateA.getTime(); // Decrescente (Mais recente primeiro)
+            return dateB.getTime() - dateA.getTime(); // Decrescente
         };
 
         const getSectorStyle = (sector) => {
@@ -189,7 +194,6 @@
               if (cleanLine.toLowerCase().startsWith('entrega')) return;
 
               const columns = cleanLine.split(separator);
-              
               const col0 = columns[0] ? columns[0].trim() : '';
               
               if (col0 && (col0.match(/^\d{4}-\d{1,2}-\d{1,2}/) || col0.match(/^\d{1,2}\/\d{1,2}\/\d{2,4}/))) {
@@ -221,7 +225,7 @@
           };
 
         function App() {
-          const [deliveries, setDeliveries] = useState([]); // Inicia vazio
+          const [deliveries, setDeliveries] = useState([]); 
           const [searchTerm, setSearchTerm] = useState('');
           const [activeTab, setActiveTab] = useState('list'); 
           const [uploadStats, setUploadStats] = useState({ count: 0, show: false });
@@ -241,6 +245,7 @@
           const [isImportModalOpen, setIsImportModalOpen] = useState(false); 
           const [editingId, setEditingId] = useState(null);
           
+          // ESTADO DA DATA DE IMPRESSÃO (Padrão: HOJE YYYY-MM-DD)
           const todayISO = new Date().toISOString().split('T')[0]; 
           const [printDate, setPrintDate] = useState(todayISO);
           const [onlyPendingPrint, setOnlyPendingPrint] = useState(true);
@@ -254,9 +259,8 @@
             textData: ''
           });
 
-          // --- FIREBASE REALTIME LISTENER ---
+          // --- FIREBASE LISTENER ---
           useEffect(() => {
-            // Ordena por criação para garantir estabilidade no recebimento
             const q = query(collection(db, "entregas"), orderBy("createdAt", "desc"));
             const unsubscribe = onSnapshot(q, (querySnapshot) => {
               const loadedData = [];
@@ -276,7 +280,6 @@
                   return;
               }
 
-              // Importação em lote
               const batchPromises = parsedData.map(async (item) => {
                  try {
                      await addDoc(collection(db, "entregas"), {
@@ -292,7 +295,6 @@
 
           const handleSaveDelivery = async (e) => {
             e.preventDefault();
-
             const newEntry = {
               ...newDeliveryForm,
               remetente: newDeliveryForm.remetente.toUpperCase(),
@@ -368,10 +370,10 @@
               data = data.filter(d => Object.values(d).some(val => String(val).toLowerCase().includes(lowerSearch)));
             }
             
-            // Ordenação Robusta por DATA (Mais recente no topo)
             return data.sort((a, b) => compareDates(a.data, b.data)); 
           }, [deliveries, searchTerm, quickFilter, selectedMonth, viewYear, activeTab]);
 
+          // Lógica de Impressão Filtrada pela DATA ESCOLHIDA
           const printData = useMemo(() => {
               if (!printDate) return [];
               const [y, m, d] = printDate.split('-');
@@ -582,19 +584,20 @@
                             </div>
                           </div>
 
+                          {/* SEÇÃO DE IMPRESSÃO - PRETO NO BRANCO */}
                           <div id="print-section" className="hidden p-8 bg-white">
                               <div className="flex justify-between items-center mb-6 border-b pb-4 border-black">
-                                <h1 className="text-xl font-bold">Relação de Entregas - {printDate.split('-').reverse().join('/')}</h1>
-                                <span className="text-sm">{onlyPendingPrint ? "Itens Pendentes" : "Relatório Completo do Dia"}</span>
+                                <h1 className="text-xl font-bold text-black">Relação de Entregas - {printDate.split('-').reverse().join('/')}</h1>
+                                <span className="text-sm text-black">{onlyPendingPrint ? "Itens Pendentes" : "Relatório Completo do Dia"}</span>
                               </div>
-                              <table className="w-full text-xs border-collapse border border-black">
+                              <table className="w-full text-xs border-collapse border border-black text-black">
                                   <thead>
                                       <tr>
-                                          <th className="border border-black p-2 text-left w-20">Data</th>
-                                          <th className="border border-black p-2 text-left">Remetente</th>
-                                          <th className="border border-black p-2 text-left">Setor</th>
-                                          <th className="border border-black p-2 text-left">Entregue Para</th>
-                                          <th className="border border-black p-2 text-left w-40">Assinatura / Recebido Por</th>
+                                          <th className="border border-black p-2 text-left w-20 font-bold">Data</th>
+                                          <th className="border border-black p-2 text-left font-bold">Remetente</th>
+                                          <th className="border border-black p-2 text-left font-bold">Setor</th>
+                                          <th className="border border-black p-2 text-left font-bold">Entregue Para</th>
+                                          <th className="border border-black p-2 text-left w-40 font-bold">Assinatura / Recebido Por</th>
                                       </tr>
                                   </thead>
                                   <tbody>
