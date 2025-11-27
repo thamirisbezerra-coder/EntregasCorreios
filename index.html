@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Logística 2025 - Firebase Connect</title>
+    <title>Painel de Logística 2025</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -36,6 +36,8 @@
             #print-section, #print-section * { visibility: visible; }
             #print-section { position: absolute; left: 0; top: 0; width: 100%; background: white; padding: 20px; }
             .no-print { display: none !important; }
+            /* Força a cor de fundo na impressão */
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
     </style>
 
@@ -48,7 +50,7 @@
         "recharts": "https://esm.sh/recharts?deps=react@18.2.0,react-dom@18.2.0",
         "lucide-react": "https://esm.sh/lucide-react?deps=react@18.2.0",
         "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
-        "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js",
+        "firebase/analytics": "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js",
         "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"
       }
     }
@@ -64,8 +66,7 @@
         import React, { useState, useMemo, useEffect } from 'react';
         import ReactDOM from 'react-dom/client';
         import { initializeApp } from "firebase/app";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "firebase/auth";
-        import { getFirestore, collection, addDoc, updateDoc, doc, query, orderBy, onSnapshot } from "firebase/firestore";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "firebase/firestore";
         import { 
           BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, 
           PieChart, Pie, Cell 
@@ -75,7 +76,7 @@
           FileText, LayoutDashboard, AlertCircle, Download, X, CheckCircle2,
           Calendar as CalendarIcon, UserCheck, Search as SearchIcon, AlertTriangle,
           Menu, Plus, Save, Edit3, Clock, CalendarDays, ChevronDown, History, ClipboardList, FileSpreadsheet,
-          Sun, CloudRain, Snowflake, Leaf, CloudLightning, Umbrella, Printer, HelpCircle, ArrowUp, ArrowDown, Database, WifiOff
+          Sun, CloudRain, Snowflake, Leaf, CloudLightning, Umbrella, Printer, HelpCircle, ArrowUp, ArrowDown, Filter
         } from 'lucide-react';
 
         // --- Configuração Firebase ---
@@ -90,10 +91,25 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
         const db = getFirestore(app);
 
         const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#6366f1', '#ec4899'];
+
+        // --- Dados Iniciais ---
+        const INITIAL_DATA = [
+          { data: '02/01/2025', remetente: 'LUISA', transportadora: '****', doc: '1001815000', entreguePara: 'Paulo cunha', quemEntregou: '', setor: 'P&D', obs: 'Entregue em mãos!' },
+          { data: '03/01/2025', remetente: 'HENRIPRINT GRAFICA', transportadora: 'SEDEX', doc: 'AA812420554BR', entreguePara: 'Jhonatas Silva', quemEntregou: '', setor: 'COMPRAS', obs: 'Deixado em sua mesa!' },
+          { data: '03/02/2025', remetente: 'MAIS MU', transportadora: '****', doc: '****', entreguePara: 'Aline Emerenciano', quemEntregou: '', setor: 'SEL', obs: '' },
+          { data: '05/03/2025', remetente: 'ORIGIN', transportadora: 'FEDEX', doc: '285780863096', entreguePara: 'Priscila Zaccardelli', quemEntregou: '', setor: 'COMPRAS', obs: '' },
+          { data: '01/04/2025', remetente: 'CARLOS SARMIENTO', transportadora: 'DHL', doc: '4938879013', entreguePara: 'Maria Bernardes', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue para Maria!' },
+          { data: '05/05/2025', remetente: 'COLOR ANDINA FOODS', transportadora: 'SEDEX', doc: 'AC534888354BR', entreguePara: 'Priscila', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
+          { data: '02/06/2025', remetente: 'DOHLER AMERICA', transportadora: 'SEDEX', doc: 'AC664235915BR', entreguePara: 'Michelle Silva', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
+          { data: '01/07/2025', remetente: 'ZHANGYU', transportadora: 'FEDEX', doc: '*', entreguePara: 'Jessica Souza', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
+          { data: '01/08/2025', remetente: 'DUX COMPANY', transportadora: '*', doc: '*', entreguePara: 'Amanda', quemEntregou: '', setor: 'LABORATÓRIO', obs: 'Sem a/c entregue para Amanda!' },
+          { data: '01/09/2025', remetente: 'NOVAPROM', transportadora: 'SEDEX', doc: 'OY585202177BR', entreguePara: 'MICHELLE SILVA', quemEntregou: '', setor: 'COMPRAS', obs: 'entregue em mãos!' },
+          { data: '01/10/2025', remetente: 'HUBEI XINGFA', transportadora: 'DHL', doc: '-', entreguePara: 'MARCELO PRAIA', quemEntregou: '', setor: 'COMPRAS', obs: 'Entregue em mãos!' },
+          { data: '03/11/2025', remetente: 'RENATA AMARAL', transportadora: '-', doc: '-', entreguePara: 'NATHALIA MEDEIROS', quemEntregou: '', setor: 'MANUTENÇÃO', obs: 'Entregue em mãos!' },
+        ];
 
         // --- Configuração dos Meses ---
         const MONTHS_CONFIG = [
@@ -189,7 +205,7 @@
                   entreguePara: columns[4]?.trim() || '-',
                   quemEntregou: '', 
                   setor: cleanSetor,
-                  obs: columns[6] ? columns.slice(6).join(' ').trim().replace(/"/g, '') : ''
+                  obs: columns.slice(6).join(' ').trim().replace(/"/g, '') || ''
                 });
               }
             });
@@ -197,10 +213,14 @@
           };
 
         function App() {
-          // Inicializa vazio, será preenchido pelo Firebase
-          const [deliveries, setDeliveries] = useState([]);
-          const [isLoading, setIsLoading] = useState(true);
-          const [user, setUser] = useState(null);
+          const [deliveries, setDeliveries] = useState(() => {
+              const saved = localStorage.getItem('logistica_data_2025');
+              return saved ? JSON.parse(saved) : INITIAL_DATA;
+          });
+
+          const [isDemoData, setIsDemoData] = useState(() => {
+             return !localStorage.getItem('logistica_data_2025');
+          });
 
           const [searchTerm, setSearchTerm] = useState('');
           const [activeTab, setActiveTab] = useState('list'); 
@@ -220,8 +240,13 @@
           const [isSidebarOpen, setIsSidebarOpen] = useState(false);
           const [isModalOpen, setIsModalOpen] = useState(false); 
           const [isImportModalOpen, setIsImportModalOpen] = useState(false); 
-          const [editingItem, setEditingItem] = useState(null);
+          const [editingIndex, setEditingIndex] = useState(null);
           
+          // Novo: Estado para Data de Impressão
+          const todayISO = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD para input
+          const [printDate, setPrintDate] = useState(todayISO);
+          const [onlyPendingPrint, setOnlyPendingPrint] = useState(true); // Checkbox para "Apenas Pendentes"
+
           const [newDeliveryForm, setNewDeliveryForm] = useState({
             data: '', remetente: '', transportadora: '', doc: '', entreguePara: '', quemEntregou: '', setor: '', obs: ''
           });
@@ -231,40 +256,25 @@
             textData: ''
           });
 
-          // --- 1. Autenticação e Sincronização em Tempo Real ---
           useEffect(() => {
-            // Autenticação Anônima para permitir escrita no Firebase
-            const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-                if (currentUser) {
-                    setUser(currentUser);
-                } else {
-                    signInAnonymously(auth).catch((error) => {
-                        console.error("Erro ao logar anonimamente:", error);
-                        alert("Erro de conexão com o banco de dados.");
-                    });
-                }
-            });
+              localStorage.setItem('logistica_data_2025', JSON.stringify(deliveries));
+          }, [deliveries]);
 
-            // Listener do Firestore (Tempo Real)
-            const q = query(collection(db, "entregas"), orderBy("createdAt", "desc"));
-            const unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+          useEffect(() => {
+            const fetchData = async () => {
+              try {
+                const q = query(collection(db, "entregas"), orderBy("createdAt", "desc")); 
+                const querySnapshot = await getDocs(q);
                 const loadedData = [];
-                snapshot.forEach((doc) => {
-                    loadedData.push({ id: doc.id, ...doc.data() });
+                querySnapshot.forEach((doc) => {
+                  loadedData.push({ id: doc.id, ...doc.data() });
                 });
-                
-                // Só atualiza se tiver dados, senão mantém vazio ou dados iniciais se quiser
-                setDeliveries(loadedData);
-                setIsLoading(false);
-            }, (error) => {
-                console.error("Erro ao ler dados:", error);
-                setIsLoading(false);
-            });
-
-            return () => {
-                unsubscribeAuth();
-                unsubscribeSnapshot();
+                if (loadedData.length > 0) {
+                  // Prioridade para dados da nuvem se existirem
+                }
+              } catch (e) { }
             };
+            fetchData();
           }, []);
 
           const handleProcessImport = async () => {
@@ -274,32 +284,24 @@
                   alert("Ops! Não consegui ler nenhum dado válido.");
                   return;
               }
-
-              // Salvar em lote no Firebase
-              const batchPromises = parsedData.map(item => {
-                  return addDoc(collection(db, "entregas"), {
-                      ...item,
-                      createdAt: new Date().toISOString()
-                  });
+              setDeliveries(prev => {
+                  const currentData = isDemoData ? [] : prev;
+                  const prevString = new Set(currentData.map(d => JSON.stringify({d: d.data, r: d.remetente, doc: d.doc})));
+                  const uniqueNew = parsedData.filter(d => !prevString.has(JSON.stringify({d: d.data, r: d.remetente, doc: d.doc})));
+                  return [...uniqueNew, ...currentData]; 
               });
-
-              try {
-                  await Promise.all(batchPromises);
-                  alert(`${parsedData.length} registros importados com sucesso!`);
-                  setImportForm({ ...importForm, textData: '' });
-                  setIsImportModalOpen(false);
-              } catch (error) {
-                  console.error("Erro na importação:", error);
-                  alert("Erro ao salvar alguns dados. Verifique o console.");
-              }
+              if (isDemoData) setIsDemoData(false);
+              setImportForm({ ...importForm, textData: '' });
+              alert(`${parsedData.length} registros importados com sucesso!`);
           };
 
           const handleSaveDelivery = async (e) => {
             e.preventDefault();
             
-            if (!user) {
-                alert("Aguarde a conexão com o banco de dados...");
-                return;
+            let currentData = deliveries;
+            if (isDemoData) {
+                currentData = [];
+                setIsDemoData(false);
             }
 
             const newEntry = {
@@ -313,24 +315,21 @@
               createdAt: new Date().toISOString()
             };
 
-            try {
-                if (editingItem) {
-                    // Atualizar Existente
-                    const docRef = doc(db, "entregas", editingItem.id);
-                    await updateDoc(docRef, newEntry);
-                } else {
-                    // Criar Novo
-                    await addDoc(collection(db, "entregas"), newEntry);
-                }
-                setIsModalOpen(false);
-            } catch (error) {
-                console.error("Erro ao salvar:", error);
-                alert("Erro ao salvar no banco de dados:\n" + error.message);
+            if (editingIndex !== null) {
+              setDeliveries(prev => {
+                const updated = [...prev];
+                updated[editingIndex] = newEntry;
+                return updated;
+              });
+            } else {
+              setDeliveries([newEntry, ...currentData]);
+              try { await addDoc(collection(db, "entregas"), newEntry); } catch (e) {}
             }
+            setIsModalOpen(false);
           };
 
           const handleOpenNew = () => {
-            setEditingItem(null);
+            setEditingIndex(null);
             setNewDeliveryForm({
               data: new Date().toLocaleDateString('pt-BR'),
               remetente: '', transportadora: '', doc: '', entreguePara: '', quemEntregou: '', setor: '', obs: ''
@@ -339,7 +338,8 @@
           };
 
           const handleOpenEdit = (item) => {
-            setEditingItem(item);
+            const realIndex = deliveries.indexOf(item);
+            setEditingIndex(realIndex);
             setNewDeliveryForm({ ...item });
             setIsModalOpen(true);
           };
@@ -378,15 +378,25 @@
               data = data.filter(d => Object.values(d).some(val => String(val).toLowerCase().includes(lowerSearch)));
             }
             
-            return data;
+            return data; 
           }, [deliveries, searchTerm, quickFilter, selectedMonth, viewYear, activeTab]);
 
+          // Lógica de Impressão Filtrada por Data Escolhida
           const printData = useMemo(() => {
-              const today = new Date().toLocaleDateString('pt-BR');
-              return deliveries.filter(d => 
-                  d.data === today && (!d.obs || d.obs.trim() === '')
-              );
-          }, [deliveries]);
+              if (!printDate) return [];
+              const [y, m, d] = printDate.split('-');
+              const formattedPrintDate = `${d}/${m}/${y}`; // Converte YYYY-MM-DD para DD/MM/YYYY
+
+              return deliveries.filter(item => {
+                  const matchDate = item.data === formattedPrintDate;
+                  if (!matchDate) return false;
+                  if (onlyPendingPrint) {
+                      // Se "Apenas Pendentes" marcado, esconde os que já tem observação (já finalizados)
+                      return !item.obs || item.obs.trim() === '';
+                  }
+                  return true; // Se não marcado, mostra tudo da data
+              });
+          }, [deliveries, printDate, onlyPendingPrint]);
 
           const stats = useMemo(() => {
             let dataYear = deliveries.filter(d => parseDateYear(d.data) === viewYear);
@@ -454,13 +464,7 @@
                   <button onClick={() => {setActiveTab('list'); setIsSidebarOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 font-medium ${activeTab === 'list' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20 translate-x-1' : 'text-slate-400 hover:bg-slate-800 hover:text-white hover:translate-x-1'}`}><FileText size={20} /> <span>Relatório Diário</span></button>
                   <button onClick={() => {setActiveTab('dashboard'); setIsSidebarOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 font-medium ${activeTab === 'dashboard' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20 translate-x-1' : 'text-slate-400 hover:bg-slate-800 hover:text-white hover:translate-x-1'}`}><LayoutDashboard size={20} /> <span>Dashboard Gráfico</span></button>
                 </nav>
-                <div className="p-6 border-t border-slate-800">
-                    <div className="flex items-center gap-2 mb-2">
-                        {user ? <span className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full"><div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div> Online</span> : <span className="flex items-center gap-1 text-[10px] text-red-400 bg-red-400/10 px-2 py-0.5 rounded-full"><WifiOff size={10} /> Offline</span>}
-                    </div>
-                    <p className="text-xs text-slate-400 mb-1">Total Geral ({viewYear})</p>
-                    <p className="text-3xl font-bold text-white">{stats.total}</p>
-                </div>
+                <div className="p-6 border-t border-slate-800"><p className="text-xs text-slate-400 mb-1">Total Geral ({viewYear})</p><p className="text-3xl font-bold text-white">{stats.total}</p></div>
               </div>
               {isSidebarOpen && <div className="fixed inset-0 bg-black/40 backdrop-blur-[1px] z-30 no-print" onClick={() => setIsSidebarOpen(false)}></div>}
 
@@ -484,6 +488,7 @@
                       {/* Área da Nova Entrega com Seta Indicativa */}
                       <div className="relative flex flex-col items-center">
                           <button onClick={handleOpenNew} disabled={viewYear !== currentYear} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium shadow-sm transition-all active:scale-95 ${viewYear !== currentYear ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}><Plus size={18} /> <span className="hidden sm:inline">Nova Entrega</span></button>
+                          {viewYear === currentYear && <div className="absolute top-full mt-1 text-blue-600 animate-bounce flex flex-col items-center"><ArrowUp size={16} className="rotate-180" /><span className="text-[10px] font-bold whitespace-nowrap">Comece aqui</span></div>}
                       </div>
                   </div>
                 </header>
@@ -508,12 +513,7 @@
                       </div>
                   )}
 
-                  {isLoading ? (
-                    <div className="h-64 flex flex-col items-center justify-center text-slate-400 gap-2">
-                        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                        <p className="text-sm font-medium">Carregando dados do servidor...</p>
-                    </div>
-                  ) : activeTab === 'list' ? (
+                  {activeTab === 'list' ? (
                     <div className="space-y-6 animate-in fade-in duration-500 h-full flex flex-col">
                       
                       {/* CARDS DE MÉTRICAS */}
@@ -571,11 +571,27 @@
                                     <span className="text-xs font-normal text-slate-400 border border-slate-200 rounded px-2 py-0.5 hidden sm:inline-block">{filteredDeliveries.length} entregas</span>
                                 </h3>
                             </div>
-                            <div className="flex gap-3 w-full sm:w-auto">
-                                <button onClick={handlePrint} className="p-2 bg-slate-800 text-white rounded hover:bg-slate-700 text-xs font-medium flex items-center gap-2 whitespace-nowrap" title="Imprimir Pendentes de Hoje">
-                                    <Printer size={14} /> Imprimir Lista do Dia
-                                </button>
-                                <div className="relative w-full sm:w-48">
+                            <div className="flex gap-3 w-full sm:w-auto items-center">
+                                {/* ÁREA DE IMPRESSÃO */}
+                                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg p-1">
+                                    <input 
+                                        type="date" 
+                                        className="text-xs bg-transparent border-none outline-none text-slate-600 w-24 cursor-pointer" 
+                                        value={printDate}
+                                        onChange={(e) => setPrintDate(e.target.value)}
+                                        title="Selecione a data para imprimir"
+                                    />
+                                    <button onClick={handlePrint} className="p-1.5 bg-slate-800 text-white rounded hover:bg-slate-700 flex items-center gap-1 transition-colors" title={`Imprimir Lista de ${printDate.split('-').reverse().join('/')}`}>
+                                        <Printer size={14} /> 
+                                        <span className="text-[10px] font-bold">{printData.length}</span>
+                                    </button>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                     <input type="checkbox" id="onlyPending" checked={onlyPendingPrint} onChange={(e) => setOnlyPendingPrint(e.target.checked)} className="cursor-pointer accent-blue-600" />
+                                     <label htmlFor="onlyPending" className="text-[10px] text-slate-500 cursor-pointer select-none">Só Pendentes</label>
+                                </div>
+
+                                <div className="relative w-full sm:w-40">
                                     <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                     <input type="text" placeholder="Filtrar..." className="w-full pl-10 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                                 </div>
@@ -585,7 +601,7 @@
                           {/* SEÇÃO DE IMPRESSÃO (Visível apenas ao imprimir) */}
                           <div id="print-section" className="hidden p-8 bg-white">
                               <div className="flex justify-between items-center mb-6 border-b pb-4">
-                                <h1 className="text-xl font-bold">Relação de Entregas - {new Date().toLocaleDateString()}</h1>
+                                <h1 className="text-xl font-bold">Relação de Entregas - {printDate.split('-').reverse().join('/')}</h1>
                                 <span className="text-sm text-slate-500">Pendências para assinatura</span>
                               </div>
                               <table className="w-full text-xs border-collapse border border-slate-300">
@@ -608,7 +624,7 @@
                                               <td className="border p-2"></td>
                                           </tr>
                                       )) : (
-                                          <tr><td colSpan="5" className="border p-4 text-center italic">Nenhuma entrega pendente para hoje.</td></tr>
+                                          <tr><td colSpan="5" className="border p-4 text-center italic">Nenhuma entrega encontrada para esta data.</td></tr>
                                       )}
                                   </tbody>
                               </table>
@@ -639,33 +655,33 @@
                                       </div>
                                     </td>
                                     <td className="px-6 py-3 align-top text-center">
-                                        <div className="font-medium text-slate-800 text-sm group-hover:text-blue-700 transition-colors mb-1.5">{item.remetente}</div>
-                                        {item.obs && (
-                                              <div className={`text-xs px-2 py-1.5 rounded border inline-block max-w-md leading-snug font-medium ${obsAlert === 'alert' ? 'bg-orange-50 text-orange-800 border-orange-100' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                                                  {obsAlert === 'alert' && <AlertTriangle size={12} className="inline mr-1 -mt-0.5 text-orange-500" />}
-                                                  {item.obs}
-                                              </div>
+                                       <div className="font-medium text-slate-800 text-sm group-hover:text-blue-700 transition-colors mb-1.5">{item.remetente}</div>
+                                       {item.obs && (
+                                            <div className={`text-xs px-2 py-1.5 rounded border inline-block max-w-md leading-snug font-medium ${obsAlert === 'alert' ? 'bg-orange-50 text-orange-800 border-orange-100' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                                                {obsAlert === 'alert' && <AlertTriangle size={12} className="inline mr-1 -mt-0.5 text-orange-500" />}
+                                                {item.obs}
+                                            </div>
                                         )}
                                     </td>
                                     <td className="px-6 py-3 align-top w-48 text-center">
-                                        {!isPending ? (
+                                       {!isPending ? (
                                          <div className="flex flex-col gap-1 items-center">
                                             <div className="flex items-center gap-1.5"><UserCheck size={14} className="text-emerald-600" /><span className="text-xs font-semibold text-slate-700">{item.entreguePara}</span></div>
                                             {item.quemEntregou && item.quemEntregou !== '-' && (
                                                 <div className="flex items-center gap-1.5 ml-0.5"><span className="text-[10px] text-slate-400">Por: {item.quemEntregou}</span></div>
                                             )}
                                          </div>
-                                        ) : (
+                                       ) : (
                                          <div className="flex items-center gap-1.5 opacity-60 justify-center"><Clock size={14} className="text-slate-400" /><span className="text-xs font-medium text-slate-500 italic">Pendente</span></div>
-                                        )}
+                                       )}
                                     </td>
                                     <td className="px-6 py-3 align-top w-32 text-center">
                                         <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${getSectorStyle(item.setor)}`}>{item.setor}</span>
                                     </td>
                                     <td className="px-6 py-3 align-middle text-right w-10">
-                                        {viewYear === currentYear && (
-                                             <button onClick={() => handleOpenEdit(item)} className="p-1.5 rounded hover:bg-blue-50 text-slate-300 hover:text-blue-600 transition-all" title="Editar"><Edit3 size={16} /></button>
-                                        )}
+                                       {viewYear === currentYear && (
+                                           <button onClick={() => handleOpenEdit(item)} className="p-1.5 rounded hover:bg-blue-50 text-slate-300 hover:text-blue-600 transition-all" title="Editar"><Edit3 size={16} /></button>
+                                       )}
                                     </td>
                                   </tr>
                                 )}) : (
@@ -678,7 +694,7 @@
                       </div>
                     </div>
                   ) : (
-                      <div className="space-y-6 animate-in fade-in duration-500 h-full flex flex-col">
+                     <div className="space-y-6 animate-in fade-in duration-500 h-full flex flex-col">
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
                           <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
                             <h3 className="text-base font-bold text-slate-800 mb-6 flex items-center gap-2"><CalendarIcon size={18} className="text-slate-400"/> Fluxo Anual ({viewYear})</h3>
@@ -689,7 +705,7 @@
                             <div className="flex-1 min-h-0"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={stats.topSectors} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">{stats.topSectors.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />))}</Pie><RechartsTooltip /><Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{fontSize: '12px'}} /></PieChart></ResponsiveContainer></div>
                           </div>
                         </div>
-                      </div>
+                     </div>
                   )}
                 </div>
               </main>
@@ -731,6 +747,7 @@
                         <button onClick={() => setIsImportModalOpen(false)} className="px-6 py-3 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors">Cancelar</button>
                         <div className="flex gap-3">
                             <button onClick={handleProcessImport} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-lg shadow-blue-900/20 flex items-center gap-2"><CheckCircle2 size={18} /> Processar e Adicionar</button>
+                            <button onClick={() => setIsImportModalOpen(false)} className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-lg shadow-emerald-900/20">Finalizar Importação</button>
                         </div>
                     </div>
                   </div>
@@ -742,7 +759,7 @@
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
                   <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
                     <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                      <h3 className="text-lg font-bold text-slate-800">{editingItem ? 'Editar Entrega' : `Nova Entrega ${currentYear}`}</h3>
+                      <h3 className="text-lg font-bold text-slate-800">{editingIndex !== null ? 'Editar Entrega' : `Nova Entrega ${currentYear}`}</h3>
                       <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={24} /></button>
                     </div>
                     <form onSubmit={handleSaveDelivery} className="p-6 space-y-4">
@@ -782,21 +799,21 @@
                       <div className="grid grid-cols-2 gap-4">
                          <div className="space-y-1 relative group tooltip-trigger">
                              <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">
-                                  Entregue Para <HelpCircle size={12} className="text-slate-400"/>
+                                 Entregue Para <HelpCircle size={12} className="text-slate-400"/>
                              </label>
                              <div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Quem recebeu a encomenda (assinou). Deixe em branco se pendente.</div>
                              <input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.entreguePara} onChange={e => setNewDeliveryForm({...newDeliveryForm, entreguePara: e.target.value})} />
                          </div>
                          <div className="space-y-1 relative group tooltip-trigger">
                              <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">
-                                  Entregue Por <HelpCircle size={12} className="text-slate-400"/>
+                                 Entregue Por <HelpCircle size={12} className="text-slate-400"/>
                              </label>
                              <div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Funcionário da logística que realizou a entrega.</div>
                              <input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.quemEntregou} onChange={e => setNewDeliveryForm({...newDeliveryForm, quemEntregou: e.target.value})} />
                          </div>
                       </div>
                       <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Observações</label><textarea className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-20 resize-none" value={newDeliveryForm.obs} onChange={e => setNewDeliveryForm({...newDeliveryForm, obs: e.target.value})}></textarea></div>
-                      <div className="pt-4 flex gap-3"><button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 font-medium">Cancelar</button><button type="submit" className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"><Save size={18} /> {editingItem ? 'Atualizar' : 'Salvar Entrada'}</button></div>
+                      <div className="pt-4 flex gap-3"><button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 font-medium">Cancelar</button><button type="submit" className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"><Save size={18} /> {editingIndex !== null ? 'Atualizar' : 'Salvar Entrada'}</button></div>
                     </form>
                   </div>
                 </div>
@@ -824,6 +841,5 @@
     </script>
 </body>
 </html>
-
 
 
