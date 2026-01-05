@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Logística 2025</title>
+    <title>Painel de Logística</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -86,7 +86,7 @@
           FileText, LayoutDashboard, AlertCircle, Download, X, CheckCircle2,
           Calendar as CalendarIcon, UserCheck, Search as SearchIcon, AlertTriangle,
           Menu, Plus, Save, Edit3, Clock, CalendarDays, ChevronDown, History, ClipboardList, FileSpreadsheet,
-          Sun, CloudRain, Snowflake, Leaf, CloudLightning, Umbrella, Printer, HelpCircle, ArrowUp, ArrowDown
+          Sun, CloudRain, Snowflake, Leaf, CloudLightning, Umbrella, Printer, HelpCircle, ArrowUp, ArrowDown, ExternalLink
         } from 'lucide-react';
 
         // --- Configuração Firebase ---
@@ -104,9 +104,6 @@
         const db = getFirestore(app);
 
         const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#6366f1', '#ec4899'];
-
-        // --- Dados Iniciais (Apenas para fallback) ---
-        const INITIAL_DATA = [];
 
         // --- Configuração dos Meses ---
         const MONTHS_CONFIG = [
@@ -228,7 +225,6 @@
           const [deliveries, setDeliveries] = useState([]); 
           const [searchTerm, setSearchTerm] = useState('');
           const [activeTab, setActiveTab] = useState('list'); 
-          const [uploadStats, setUploadStats] = useState({ count: 0, show: false });
           const [quickFilter, setQuickFilter] = useState('ALL');
           
           const currentMonthIndex = new Date().getMonth(); 
@@ -236,10 +232,13 @@
           const [selectedMonth, setSelectedMonth] = useState(currentMonthId); 
           const [isMonthSidebarOpen, setIsMonthSidebarOpen] = useState(false); 
 
-          const [currentYear, setCurrentYear] = useState(2025);
-          const [viewYear, setViewYear] = useState(2025);
-          const [showNewYearModal, setShowNewYearModal] = useState(false);
+          // --- ANO ATUAL AUTOMÁTICO ---
+          const actualYear = new Date().getFullYear();
+          const [currentYear, setCurrentYear] = useState(actualYear);
+          const [viewYear, setViewYear] = useState(actualYear);
           
+          // Estados de UI
+          const [isYearMenuOpen, setIsYearMenuOpen] = useState(false);
           const [isSidebarOpen, setIsSidebarOpen] = useState(false);
           const [isModalOpen, setIsModalOpen] = useState(false); 
           const [isImportModalOpen, setIsImportModalOpen] = useState(false); 
@@ -336,16 +335,15 @@
             setIsModalOpen(true);
           };
 
-          const handleStartNewYear = () => {
-             const nextYear = currentYear + 1;
-             setCurrentYear(nextYear);
-             setViewYear(nextYear);
-             setShowNewYearModal(false);
-          };
-
           const handlePrint = () => {
               window.print();
           };
+
+          const availableYears = useMemo(() => {
+             const years = new Set([currentYear]);
+             deliveries.forEach(d => { const y = parseDateYear(d.data); if (y > 2000) years.add(y); });
+             return Array.from(years).sort((a,b) => b-a);
+          }, [deliveries, currentYear]);
 
           const filteredDeliveries = useMemo(() => {
             let data = deliveries.filter(d => parseDateYear(d.data) === viewYear);
@@ -419,12 +417,6 @@
             return { total, topSectors, topCarriers, chartData, availableMonths };
           }, [deliveries, viewYear]);
 
-          const availableYears = useMemo(() => {
-             const years = new Set([currentYear]);
-             deliveries.forEach(d => { const y = parseDateYear(d.data); if (y > 2000) years.add(y); });
-             return Array.from(years).sort((a,b) => b-a);
-          }, [deliveries, currentYear]);
-
           const StatCard = ({ icon: Icon, label, value, subtext, color = "blue", insight = false }) => (
             <div className={`relative overflow-hidden p-6 rounded-xl border shadow-sm transition-all duration-200 ${insight ? 'bg-gradient-to-br from-indigo-600 to-violet-700 text-white border-transparent' : 'bg-white border-slate-200 hover:shadow-md'}`}>
               {!insight ? (
@@ -467,20 +459,35 @@
                       <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"><Menu size={24} /></button>
                       <h2 className="text-xl font-bold text-slate-800 flex items-center gap-3 truncate">
                         {activeTab === 'dashboard' ? 'Dashboard' : 'Relatório'}
-                        <div className="relative group">
-                            <button className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3 py-1 rounded-full border border-slate-300"><CalendarDays size={12} />{viewYear}<ChevronDown size={12} /></button>
-                            <div className="absolute top-full left-0 mt-1 w-32 bg-white border border-slate-200 rounded-lg shadow-lg hidden group-hover:block z-50 py-1">{availableYears.map(year => (<button key={year} onClick={() => setViewYear(year)} className={`block w-full text-left px-4 py-2 text-xs hover:bg-slate-50 ${viewYear === year ? 'font-bold text-blue-600' : 'text-slate-600'}`}>{year} {year === currentYear ? '(Atual)' : ''}</button>))}</div>
+                        <div className="relative">
+                            <button 
+                                onClick={() => setIsYearMenuOpen(!isYearMenuOpen)}
+                                className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3 py-1 rounded-full border border-slate-300"
+                            >
+                                <CalendarDays size={12} />{viewYear}<ChevronDown size={12} />
+                            </button>
+                            {isYearMenuOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setIsYearMenuOpen(false)}></div>
+                                    <div className="absolute top-full left-0 mt-1 w-32 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1">
+                                        {availableYears.map(year => (
+                                            <button 
+                                                key={year} 
+                                                onClick={() => { setViewYear(year); setIsYearMenuOpen(false); }} 
+                                                className={`block w-full text-left px-4 py-2 text-xs hover:bg-slate-50 ${viewYear === year ? 'font-bold text-blue-600' : 'text-slate-600'}`}
+                                            >
+                                                {year} {year === currentYear ? '(Atual)' : ''}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
                         </div>
                       </h2>
                   </div>
                   <div className="flex items-center gap-3 w-full md:w-auto justify-end flex-col md:flex-row">
-                      {viewYear === currentYear && (
-                          <button onClick={() => setShowNewYearModal(true)} className="hidden md:flex items-center gap-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg text-xs font-semibold"><CalendarDays size={16} /> Iniciar {currentYear + 1}</button>
-                      )}
-                      
                       <div className="relative flex flex-col items-center">
                           <button onClick={handleOpenNew} disabled={viewYear !== currentYear} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium shadow-sm transition-all active:scale-95 ${viewYear !== currentYear ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}><Plus size={18} /> <span className="hidden sm:inline">Nova Entrega</span></button>
-                          {viewYear === currentYear && <div className="absolute top-full mt-1 text-blue-600 animate-bounce flex flex-col items-center"><ArrowUp size={16} className="rotate-180" /><span className="text-[10px] font-bold whitespace-nowrap">Comece aqui</span></div>}
                       </div>
                   </div>
                 </header>
@@ -489,6 +496,25 @@
 
                 <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 space-y-6" id="main-content">
                   
+                  {/* ALERTA SE A TELA ESTIVER VAZIA MAS EXISTIREM DADOS ANTIGOS */}
+                  {filteredDeliveries.length === 0 && deliveries.length > 0 && viewYear === currentYear && (
+                    <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 no-print animate-in">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-white p-3 rounded-full shadow-sm text-indigo-600"><History size={24} /></div>
+                            <div>
+                                <h3 className="font-bold text-indigo-900">Nenhuma entrega em {currentYear} (ainda).</h3>
+                                <p className="text-sm text-indigo-600">Procurando seus dados antigos? Eles estão salvos no histórico.</p>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={() => setViewYear(currentYear - 1)} 
+                            className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold shadow-lg shadow-indigo-900/10 hover:bg-indigo-700 transition-all flex items-center gap-2"
+                        >
+                            Ver dados de {currentYear - 1} <ExternalLink size={16} />
+                        </button>
+                    </div>
+                  )}
+
                   {viewYear === currentYear && (
                       <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 no-print">
                           <div className="flex items-center gap-4">
@@ -671,7 +697,7 @@
                                     </td>
                                   </tr>
                                 )}) : (
-                                    <tr><td colSpan="5" className="px-6 py-20 text-center text-slate-400 flex flex-col items-center gap-2"><Package size={32} className="opacity-20" /><span>Nenhuma entrega registrada em {MONTHS_CONFIG.find(m => m.id === selectedMonth)?.name}.</span></td></tr>
+                                    <tr><td colSpan="5" className="px-6 py-20 text-center text-slate-400 flex flex-col items-center gap-2"><Package size={32} className="opacity-20" /><span>Nenhuma entrega registrada em {MONTHS_CONFIG.find(m => m.id === selectedMonth)?.name} de {viewYear}.</span></td></tr>
                                 )}
                               </tbody>
                             </table>
@@ -742,19 +768,6 @@
                   </div>
                 </div>
               )}
-
-              {showNewYearModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-                    <div className="p-6 text-center space-y-4">
-                        <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto"><CalendarDays className="text-blue-600 h-8 w-8" /></div>
-                        <h3 className="text-xl font-bold text-slate-800">Deseja iniciar o ano {currentYear + 1}?</h3>
-                        <p className="text-slate-500 text-sm">Ao confirmar, o relatório de <strong>{currentYear}</strong> será arquivado como histórico e o painel será preparado para novos registros de <strong>{currentYear + 1}</strong>.</p>
-                        <div className="pt-4 flex gap-3"><button onClick={() => setShowNewYearModal(false)} className="flex-1 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 font-medium">Cancelar</button><button onClick={handleStartNewYear} className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg">Sim, Iniciar {currentYear + 1}</button></div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           );
         }
@@ -764,5 +777,4 @@
     </script>
 </body>
 </html>
-
 
