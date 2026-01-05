@@ -271,6 +271,40 @@
             return () => unsubscribe();
           }, []);
 
+          // --- MANIPULADOR INTELIGENTE DE HISTÓRICO ---
+          const handleViewHistory = () => {
+             const targetYear = currentYear - 1;
+             
+             // Descobrir qual é o último mês que tem dados nesse ano alvo
+             // Para evitar cair num mês vazio e o usuário achar que perdeu tudo
+             const dataFromTargetYear = deliveries.filter(d => parseDateYear(d.data) === targetYear);
+             
+             if (dataFromTargetYear.length > 0) {
+                 // Extrai os meses que possuem dados de forma segura
+                 const monthsWithData = dataFromTargetYear.map(d => {
+                     if (!d.data) return '00';
+                     // Suporta DD/MM/AAAA e YYYY-MM-DD
+                     if (d.data.includes('/')) return d.data.split('/')[1];
+                     if (d.data.includes('-')) return d.data.split('-')[1];
+                     return '00';
+                 }).sort();
+                 
+                 // Pega o último mês que tem registro (ex: '12' ou '11')
+                 const lastActiveMonth = monthsWithData[monthsWithData.length - 1];
+                 setSelectedMonth(lastActiveMonth);
+             } else {
+                 // Se não achar nada, chuta Dezembro
+                 setSelectedMonth('12');
+             }
+
+             setViewYear(targetYear);
+          };
+
+          const handleReturnToCurrent = () => {
+              setViewYear(currentYear);
+              setSelectedMonth(currentMonthId); // Volta para o mês atual real
+          };
+
           const handleProcessImport = async () => {
               if (!importForm.textData) return;
               const parsedData = parsePastedText(importForm.textData);
@@ -492,7 +526,7 @@
                   </div>
                 </header>
 
-                {viewYear !== currentYear && (<div className="bg-amber-50 border-b border-amber-100 px-6 py-2 text-xs text-amber-800 flex items-center justify-center gap-2 font-medium no-print"><History size={14} /> Você está visualizando o histórico de {viewYear}. <button onClick={() => setViewYear(currentYear)} className="underline hover:text-amber-900">Voltar para Atual</button></div>)}
+                {viewYear !== currentYear && (<div className="bg-amber-50 border-b border-amber-100 px-6 py-2 text-xs text-amber-800 flex items-center justify-center gap-2 font-medium no-print"><History size={14} /> Você está visualizando o histórico de {viewYear}. <button onClick={handleReturnToCurrent} className="underline hover:text-amber-900">Voltar para Atual</button></div>)}
 
                 <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 space-y-6" id="main-content">
                   
@@ -507,7 +541,7 @@
                             </div>
                         </div>
                         <button 
-                            onClick={() => setViewYear(currentYear - 1)} 
+                            onClick={handleViewHistory} 
                             className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold shadow-lg shadow-indigo-900/10 hover:bg-indigo-700 transition-all flex items-center gap-2"
                         >
                             Ver dados de {currentYear - 1} <ExternalLink size={16} />
@@ -777,4 +811,5 @@
     </script>
 </body>
 </html>
+
 
