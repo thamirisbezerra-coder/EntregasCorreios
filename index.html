@@ -33,6 +33,7 @@
             body * { visibility: hidden; }
             #print-section, #print-section * { visibility: visible; }
             #print-section { 
+                display: block !important; 
                 position: absolute; left: 0; top: 0; width: 100%; 
                 background: white !important; padding: 0; margin: 0; color: black !important; 
             }
@@ -77,7 +78,7 @@
           Package, Truck, Users, FileText, LayoutDashboard, X, CheckCircle2,
           Calendar as CalendarIcon, UserCheck, Search as SearchIcon, AlertTriangle,
           Menu, Plus, Save, Edit3, Clock, CalendarDays, ChevronDown, History, ClipboardList, FileSpreadsheet,
-          Printer, HelpCircle, ArrowRight, Box, Barcode, MapPin, Building2, User, ChevronRight, Filter
+          Printer, HelpCircle, ArrowRight, Box, Barcode, MapPin, Building2, User, ChevronRight, Filter, TrendingUp
         } from 'lucide-react';
 
         // --- Configuração Firebase ---
@@ -142,7 +143,6 @@
           const currentMonthId = String(currentMonthIndex + 1).padStart(2, '0');
           const [selectedMonth, setSelectedMonth] = useState(currentMonthId); 
 
-          // ATUALIZADO PARA 2026
           const [currentYear, setCurrentYear] = useState(2026);
           const [viewYear, setViewYear] = useState(2026);
           
@@ -256,20 +256,39 @@
               });
           }, [deliveries, printDate, onlyPendingPrint]);
 
+          const printStats = useMemo(() => {
+              if (printData.length === 0) return null;
+              const sectors = {};
+              const carriers = {};
+              printData.forEach(d => {
+                  const s = d.setor || 'N/A';
+                  const c = d.transportadora || 'N/A';
+                  sectors[s] = (sectors[s] || 0) + 1;
+                  carriers[c] = (carriers[c] || 0) + 1;
+              });
+              return {
+                  topSector: Object.entries(sectors).sort((a,b) => b[1] - a[1])[0],
+                  topCarrier: Object.entries(carriers).sort((a,b) => b[1] - a[1])[0]
+              };
+          }, [printData]);
+
           const stats = useMemo(() => {
             const dataYear = deliveries.filter(d => parseDateYear(d.data) === viewYear);
             const total = dataYear.length;
             const sectorCount = {};
             const monthCount = {};
+            const carrierCount = {};
             dataYear.forEach(d => {
               sectorCount[d.setor] = (sectorCount[d.setor] || 0) + 1;
+              carrierCount[d.transportadora] = (carrierCount[d.transportadora] || 0) + 1;
               const m = d.data.split('/')[1];
               const name = MONTHS_CONFIG.find(mc => mc.id === m)?.name.substring(0,3) || m;
               monthCount[name] = (monthCount[name] || 0) + 1;
             });
             const topSectors = Object.entries(sectorCount).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, value]) => ({ name, value }));
+            const topCarriers = Object.entries(carrierCount).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, value]) => ({ name, value }));
             const chartData = MONTHS_CONFIG.map(m => ({ name: m.name.substring(0,3), value: monthCount[m.name.substring(0,3)] || 0 }));
-            return { total, topSectors, chartData };
+            return { total, topSectors, topCarriers, chartData };
           }, [deliveries, viewYear]);
 
           const getStatusColor = (entregue) => (entregue && entregue !== '-' && entregue.length > 2) ? 'emerald' : 'amber';
@@ -354,7 +373,6 @@
                     <div className="flex items-center gap-5">
                         <button onClick={() => setIsSidebarOpen(true)} className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors shadow-sm border border-slate-200"><Menu size={20} /></button>
                         
-                        {/* LOGO ADICIONADO AQUI */}
                         <div className="flex items-center gap-3 pr-4 border-r border-slate-200">
                              <img src="https://i.postimg.cc/MZyMHZbD/as-02-(1).png" alt="Logo Principal" className="h-8 w-auto object-contain" />
                         </div>
@@ -405,6 +423,33 @@
                                <p className="text-xs uppercase font-medium">{onlyPendingPrint ? "Lista de Pendências" : "Relatório Geral"}</p>
                            </div>
                        </div>
+                       
+                       {printStats && (
+                           <div className="flex gap-4 mb-6 border border-black p-3 text-xs bg-gray-50">
+                               <div className="flex-1 border-r border-black pr-4">
+                                   <span className="font-bold uppercase block text-gray-500 mb-1">Setor + Recebimentos</span>
+                                   <div className="flex justify-between items-end">
+                                       <span className="text-base font-bold">{printStats.topSector ? printStats.topSector[0] : '-'}</span>
+                                       <span className="font-mono">({printStats.topSector ? printStats.topSector[1] : 0})</span>
+                                   </div>
+                               </div>
+                               <div className="flex-1 border-r border-black pr-4 pl-2">
+                                   <span className="font-bold uppercase block text-gray-500 mb-1">Transportadora Top</span>
+                                   <div className="flex justify-between items-end">
+                                       <span className="text-base font-bold">{printStats.topCarrier ? printStats.topCarrier[0] : '-'}</span>
+                                       <span className="font-mono">({printStats.topCarrier ? printStats.topCarrier[1] : 0})</span>
+                                   </div>
+                               </div>
+                                <div className="flex-1 pl-2">
+                                   <span className="font-bold uppercase block text-gray-500 mb-1">Total Volumes</span>
+                                   <div className="flex justify-between items-end">
+                                       <span className="text-base font-bold">{printData.length}</span>
+                                       <span className="font-mono">volumes</span>
+                                   </div>
+                               </div>
+                           </div>
+                       )}
+                       
                        <table className="w-full">
                            <thead>
                                <tr className="bg-gray-100">
@@ -510,6 +555,39 @@
                    {activeTab === 'list' && (
                        <div className="space-y-4 animate-in max-w-7xl mx-auto">
                            
+                           {/* CARTÕES DE RESUMO NA TELA PRINCIPAL (NOVO) */}
+                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-2 no-print">
+                               <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+                                   <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><Package size={24}/></div>
+                                   <div>
+                                       <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total {viewYear}</p>
+                                       <h3 className="text-2xl font-bold text-slate-800">{stats.total}</h3>
+                                   </div>
+                               </div>
+                               
+                               <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+                                   <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><Building2 size={24}/></div>
+                                   <div>
+                                       <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Top Setor</p>
+                                       <div className="flex items-baseline gap-2">
+                                            <h3 className="text-xl font-bold text-slate-800 truncate max-w-[120px]" title={stats.topSectors[0]?.name}>{stats.topSectors[0]?.name || '-'}</h3>
+                                            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{stats.topSectors[0]?.value || 0}</span>
+                                       </div>
+                                   </div>
+                               </div>
+
+                               <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 hidden lg:flex">
+                                   <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><Truck size={24}/></div>
+                                   <div>
+                                       <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Top Transp.</p>
+                                       <div className="flex items-baseline gap-2">
+                                            <h3 className="text-xl font-bold text-slate-800 truncate max-w-[120px]" title={stats.topCarriers[0]?.name}>{stats.topCarriers[0]?.name || '-'}</h3>
+                                            <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{stats.topCarriers[0]?.value || 0}</span>
+                                       </div>
+                                   </div>
+                               </div>
+                           </div>
+
                            {/* Filter Bar Moderna */}
                            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-wrap gap-4 items-center justify-between no-print">
                                <div className="flex items-center gap-4">
@@ -528,7 +606,7 @@
                                        <input type="checkbox" checked={onlyPendingPrint} onChange={e => setOnlyPendingPrint(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500 border-slate-300 w-4 h-4" />
                                        Apenas Pendentes
                                    </label>
-                                   <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">Total: {filteredDeliveries.length}</span>
+                                   <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">Lista: {filteredDeliveries.length}</span>
                                </div>
                            </div>
 
@@ -768,6 +846,7 @@
     </script>
 </body>
 </html>
+
 
 
 
