@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Logística 2025</title>
+    <title>Painel de Logística 2026</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -11,43 +11,36 @@
     <!-- Fonte Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .animate-in { animation: fadeIn 0.5s ease-out; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
         
-        /* Tooltip Customizado */
-        .group:hover .group-hover\:block { display: block; }
+        /* Animações Suaves */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-in { animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
         
-        /* Estilos Sazonais para os Botões de Mês */
-        .season-summer { background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border-left: 4px solid #f97316; color: #9a3412; }
-        .season-autumn { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-left: 4px solid #ef4444; color: #991b1b; }
-        .season-winter { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-left: 4px solid #3b82f6; color: #1e40af; }
-        .season-spring { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-left: 4px solid #22c55e; color: #166534; }
+        /* Scrollbar Moderna */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
-        .season-btn { position: relative; overflow: hidden; transition: all 0.2s ease; }
-        .season-btn:hover { transform: translateX(2px); }
-        .season-btn-active { transform: scale(1.02) translateX(4px); box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.1); font-weight: 700; z-index: 10; }
+        /* Utilitários */
+        .season-btn { transition: all 0.2s ease; border-left: 3px solid transparent; }
+        .season-btn:hover { background-color: rgba(255,255,255,0.05); }
+        .season-btn.active { background-color: rgba(255,255,255,0.1); border-left-color: #60a5fa; color: white; font-weight: 600; }
 
-        /* Estilo de Impressão - Força visualização correta */
+        /* Estilo de Impressão Otimizado */
         @media print {
             body * { visibility: hidden; }
             #print-section, #print-section * { visibility: visible; }
             #print-section { 
-                position: absolute; 
-                left: 0; 
-                top: 0; 
-                width: 100%; 
-                background: white !important; 
-                padding: 20px;
-                color: black !important; 
+                position: absolute; left: 0; top: 0; width: 100%; 
+                background: white !important; padding: 0; margin: 0; color: black !important; 
             }
+            @page { margin: 1cm; size: landscape; }
             .no-print { display: none !important; }
             table { width: 100% !important; border-collapse: collapse !important; }
-            th, td { border: 1px solid #000 !important; padding: 8px !important; font-size: 12px !important; }
-            /* Força a cor de fundo na impressão (Chrome/Safari) */
-            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            th, td { border-bottom: 1px solid #ddd !important; padding: 8px 4px !important; font-size: 11px !important; text-align: left; }
+            th { border-bottom: 2px solid #000 !important; font-weight: bold; }
         }
     </style>
 
@@ -60,33 +53,31 @@
         "recharts": "https://esm.sh/recharts?deps=react@18.2.0,react-dom@18.2.0",
         "lucide-react": "https://esm.sh/lucide-react?deps=react@18.2.0",
         "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
-        "firebase/analytics": "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js",
         "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"
       }
     }
     </script>
     
     <!-- Babel -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.23.8/babel.min.js"></script>
 </head>
-<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex flex-col">
+<body class="h-screen overflow-hidden text-slate-800 selection:bg-blue-100 selection:text-blue-900">
     <div id="root" class="h-full"></div>
 
-    <script type="text/babel" data-type="module">
+    <script type="text/babel" data-type="module" data-presets="react">
         import React, { useState, useMemo, useEffect } from 'react';
         import ReactDOM from 'react-dom/client';
         import { initializeApp } from "firebase/app";
-        import { getFirestore, collection, addDoc, getDocs, query, orderBy, updateDoc, doc, onSnapshot } from "firebase/firestore";
+        import { getFirestore, collection, addDoc, query, orderBy, updateDoc, doc, onSnapshot } from "firebase/firestore";
         import { 
           BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, 
           PieChart, Pie, Cell 
         } from 'recharts';
         import { 
-          Package, Search, Truck, Users, 
-          FileText, LayoutDashboard, AlertCircle, Download, X, CheckCircle2,
+          Package, Truck, Users, FileText, LayoutDashboard, X, CheckCircle2,
           Calendar as CalendarIcon, UserCheck, Search as SearchIcon, AlertTriangle,
           Menu, Plus, Save, Edit3, Clock, CalendarDays, ChevronDown, History, ClipboardList, FileSpreadsheet,
-          Sun, CloudRain, Snowflake, Leaf, CloudLightning, Umbrella, Printer, HelpCircle, ArrowUp, ArrowDown
+          Printer, HelpCircle, ArrowRight, Box, Barcode, MapPin, Building2, User, ChevronRight, Filter
         } from 'lucide-react';
 
         // --- Configuração Firebase ---
@@ -103,28 +94,17 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#6366f1', '#ec4899'];
+        // Cores mais sofisticadas para gráficos
+        const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#6366f1'];
 
-        // --- Dados Iniciais (Apenas para fallback) ---
-        const INITIAL_DATA = [];
-
-        // --- Configuração dos Meses ---
         const MONTHS_CONFIG = [
-            { id: '01', name: 'Janeiro', season: 'summer', icon: Sun, color: 'orange' },
-            { id: '02', name: 'Fevereiro', season: 'summer', icon: Sun, color: 'orange' },
-            { id: '03', name: 'Março', season: 'autumn', icon: Leaf, color: 'red' },
-            { id: '04', name: 'Abril', season: 'autumn', icon: Leaf, color: 'red' },
-            { id: '05', name: 'Maio', season: 'autumn', icon: Leaf, color: 'red' },
-            { id: '06', name: 'Junho', season: 'winter', icon: Snowflake, color: 'blue' },
-            { id: '07', name: 'Julho', season: 'winter', icon: Snowflake, color: 'blue' },
-            { id: '08', name: 'Agosto', season: 'winter', icon: Snowflake, color: 'blue' },
-            { id: '09', name: 'Setembro', season: 'spring', icon: CloudRain, color: 'green' },
-            { id: '10', name: 'Outubro', season: 'spring', icon: Umbrella, color: 'green' },
-            { id: '11', name: 'Novembro', season: 'spring', icon: CloudLightning, color: 'green' },
-            { id: '12', name: 'Dezembro', season: 'summer', icon: Sun, color: 'orange' },
+            { id: '01', name: 'Janeiro' }, { id: '02', name: 'Fevereiro' }, { id: '03', name: 'Março' },
+            { id: '04', name: 'Abril' }, { id: '05', name: 'Maio' }, { id: '06', name: 'Junho' },
+            { id: '07', name: 'Julho' }, { id: '08', name: 'Agosto' }, { id: '09', name: 'Setembro' },
+            { id: '10', name: 'Outubro' }, { id: '11', name: 'Novembro' }, { id: '12', name: 'Dezembro' },
         ];
 
-        // --- Helpers Globais ---
+        // --- Helpers ---
         const parseDateYear = (dateStr) => {
              if (!dateStr) return 0;
              if (dateStr.includes('/')) return parseInt(dateStr.split('/')[2]);
@@ -132,120 +112,45 @@
              return 0;
         };
 
-        // --- Função Robusta de Comparação de Datas (DD/MM/AAAA) ---
         const compareDates = (a, b) => {
             const parse = (str) => {
                 if (!str) return new Date(0);
                 const parts = str.split('/');
-                if (parts.length === 3) {
-                    return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-                }
-                if (str.includes('-')) return new Date(str);
+                if (parts.length === 3) return new Date(parts[2], parts[1] - 1, parts[0]);
                 return new Date(0);
             };
-            const dateA = parse(a);
-            const dateB = parse(b);
-            return dateB.getTime() - dateA.getTime(); // Decrescente
+            return parse(b) - parse(a);
         };
 
-        const getSectorStyle = (sector) => {
-            if (!sector) return 'text-slate-500 bg-slate-100';
-            const s = sector.toUpperCase();
-            if (s.includes('LAB')) return 'text-teal-600 bg-teal-50';
-            if (s.includes('COMPRAS') || s.includes('ADM')) return 'text-indigo-600 bg-indigo-50';
-            if (s.includes('P&D')) return 'text-rose-600 bg-rose-50';
-            if (s.includes('MANUT')) return 'text-orange-600 bg-orange-50';
-            if (s.includes('VENDAS')) return 'text-emerald-600 bg-emerald-50';
-            return 'text-slate-500 bg-slate-100';
-        };
-
-        const getCarrierStyle = (c) => {
-            if (!c) return '';
-            c = c.toUpperCase();
-            if (c.includes('SEDEX')) return 'text-yellow-600 bg-yellow-50 border-yellow-100';
-            if (c.includes('FEDEX')) return 'text-purple-600 bg-purple-50 border-purple-100';
-            if (c.includes('DHL')) return 'text-red-600 bg-red-50 border-red-100';
-            return 'text-slate-500 bg-slate-50 border-slate-100';
-        };
-
-        const getObsAlert = (obs) => obs && (obs.toLowerCase().includes('sem a/c') || obs.toLowerCase().includes('retirou')) ? 'alert' : 'normal';
-
-        const parsePastedText = (text) => {
-            const lines = text.split('\n');
-            const newDeliveries = [];
-            
-            let separator = '\t'; 
-            for(let line of lines) {
-                const trimmed = line.trim();
-                if(trimmed && !trimmed.match(/^\d{2} DE/) && !trimmed.toLowerCase().startsWith('entrega')) {
-                    const tabs = (trimmed.match(/\t/g) || []).length;
-                    const commas = (trimmed.match(/,/g) || []).length;
-                    const semis = (trimmed.match(/;/g) || []).length;
-                    if (commas > tabs && commas > semis) separator = ',';
-                    if (semis > tabs && semis > commas) separator = ';';
-                    break;
-                }
-            }
-
-            lines.forEach(line => {
-              const cleanLine = line.trim();
-              if (!cleanLine) return;
-              if (cleanLine.match(/^\d{2} DE [A-ZÇ]+ \([A-Z]+\)/i)) return;
-              if (cleanLine.toLowerCase().startsWith('entrega')) return;
-
-              const columns = cleanLine.split(separator);
-              const col0 = columns[0] ? columns[0].trim() : '';
-              
-              if (col0 && (col0.match(/^\d{4}-\d{1,2}-\d{1,2}/) || col0.match(/^\d{1,2}\/\d{1,2}\/\d{2,4}/))) {
-                let dateStr = col0;
-                if (dateStr.includes('-')) {
-                    const parts = dateStr.split('-');
-                    if(parts[0].length === 4) { 
-                        dateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                    }
-                }
-
-                const cleanSetor = (columns[5]?.trim().toUpperCase() || 'GERAL').replace(/[.,]/g, '').replace(/\s+/g, ' '); 
-                let cleanTransp = columns[2]?.trim().replace(/\*/g, '').replace('****', '') || 'NÃO INF.';
-                if (cleanTransp.length < 2) cleanTransp = 'NÃO INF.';
-
-                newDeliveries.push({
-                  data: dateStr,
-                  remetente: columns[1]?.trim().toUpperCase() || '',
-                  transportadora: cleanTransp,
-                  doc: columns[3]?.trim() || '-',
-                  entreguePara: columns[4]?.trim() || '-',
-                  quemEntregou: '', 
-                  setor: cleanSetor,
-                  obs: columns.slice(6).join(' ').trim().replace(/"/g, '') || ''
-                });
-              }
-            });
-            return newDeliveries;
-          };
+        const Badge = ({ children, color = 'slate', icon: Icon, filled = false }) => (
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border transition-all
+                ${filled 
+                    ? `bg-${color}-500 text-white border-${color}-600 shadow-sm` 
+                    : `bg-${color}-50 text-${color}-700 border-${color}-200`
+                }`}>
+                {Icon && <Icon size={12} strokeWidth={2.5} />}
+                {children}
+            </span>
+        );
 
         function App() {
           const [deliveries, setDeliveries] = useState([]); 
           const [searchTerm, setSearchTerm] = useState('');
           const [activeTab, setActiveTab] = useState('list'); 
-          const [uploadStats, setUploadStats] = useState({ count: 0, show: false });
-          const [quickFilter, setQuickFilter] = useState('ALL');
           
           const currentMonthIndex = new Date().getMonth(); 
           const currentMonthId = String(currentMonthIndex + 1).padStart(2, '0');
           const [selectedMonth, setSelectedMonth] = useState(currentMonthId); 
-          const [isMonthSidebarOpen, setIsMonthSidebarOpen] = useState(false); 
 
-          const [currentYear, setCurrentYear] = useState(2025);
-          const [viewYear, setViewYear] = useState(2025);
-          const [showNewYearModal, setShowNewYearModal] = useState(false);
+          // ATUALIZADO PARA 2026
+          const [currentYear, setCurrentYear] = useState(2026);
+          const [viewYear, setViewYear] = useState(2026);
           
           const [isSidebarOpen, setIsSidebarOpen] = useState(false);
           const [isModalOpen, setIsModalOpen] = useState(false); 
           const [isImportModalOpen, setIsImportModalOpen] = useState(false); 
           const [editingId, setEditingId] = useState(null);
           
-          // ESTADO DA DATA DE IMPRESSÃO (Padrão: HOJE YYYY-MM-DD)
           const todayISO = new Date().toISOString().split('T')[0]; 
           const [printDate, setPrintDate] = useState(todayISO);
           const [onlyPendingPrint, setOnlyPendingPrint] = useState(true);
@@ -254,44 +159,26 @@
             data: '', remetente: '', transportadora: '', doc: '', entreguePara: '', quemEntregou: '', setor: '', obs: ''
           });
 
-          const [importForm, setImportForm] = useState({
-            month: currentMonthId,
-            textData: ''
-          });
+          const [importForm, setImportForm] = useState({ month: currentMonthId, textData: '' });
 
-          // --- FIREBASE LISTENER ---
           useEffect(() => {
             const q = query(collection(db, "entregas"), orderBy("createdAt", "desc"));
             const unsubscribe = onSnapshot(q, (querySnapshot) => {
               const loadedData = [];
-              querySnapshot.forEach((doc) => {
-                loadedData.push({ id: doc.id, ...doc.data() });
-              });
+              querySnapshot.forEach((doc) => loadedData.push({ id: doc.id, ...doc.data() }));
               setDeliveries(loadedData);
             });
             return () => unsubscribe();
           }, []);
 
-          const handleProcessImport = async () => {
-              if (!importForm.textData) return;
-              const parsedData = parsePastedText(importForm.textData);
-              if (parsedData.length === 0) {
-                  alert("Ops! Não consegui ler nenhum dado válido.");
-                  return;
-              }
-
-              const batchPromises = parsedData.map(async (item) => {
-                 try {
-                     await addDoc(collection(db, "entregas"), {
-                         ...item,
-                         createdAt: new Date().toISOString()
-                     });
-                 } catch(e) {}
+          const availableYears = useMemo(() => {
+              const years = new Set([currentYear]);
+              deliveries.forEach(d => {
+                  const y = parseDateYear(d.data);
+                  if (y > 2020) years.add(y);
               });
-              
-              setImportForm({ ...importForm, textData: '' });
-              setIsImportModalOpen(false);
-          };
+              return Array.from(years).sort((a,b) => b - a);
+          }, [deliveries, currentYear]);
 
           const handleSaveDelivery = async (e) => {
             e.preventDefault();
@@ -307,13 +194,9 @@
 
             try {
                 if (editingId) {
-                    const docRef = doc(db, "entregas", editingId);
-                    await updateDoc(docRef, newEntry);
+                    await updateDoc(doc(db, "entregas", editingId), newEntry);
                 } else {
-                    await addDoc(collection(db, "entregas"), {
-                        ...newEntry,
-                        createdAt: new Date().toISOString()
-                    });
+                    await addDoc(collection(db, "entregas"), { ...newEntry, createdAt: new Date().toISOString() });
                 }
                 setIsModalOpen(false);
             } catch (error) {
@@ -336,425 +219,546 @@
             setIsModalOpen(true);
           };
 
-          const handleStartNewYear = () => {
-             const nextYear = currentYear + 1;
-             setCurrentYear(nextYear);
-             setViewYear(nextYear);
-             setShowNewYearModal(false);
-          };
-
-          const handlePrint = () => {
-              window.print();
+          const handleProcessImport = async () => {
+              const lines = importForm.textData.split('\n');
+              lines.forEach(async line => {
+                  const cols = line.split('\t');
+                  if(cols.length > 3) {
+                      await addDoc(collection(db, "entregas"), {
+                          data: cols[0], remetente: cols[1], transportadora: cols[2], doc: cols[3],
+                          entreguePara: cols[4] || '-', setor: cols[5] || 'GERAL', createdAt: new Date().toISOString()
+                      });
+                  }
+              });
+              setIsImportModalOpen(false);
+              setImportForm({...importForm, textData: ''});
           };
 
           const filteredDeliveries = useMemo(() => {
             let data = deliveries.filter(d => parseDateYear(d.data) === viewYear);
-            
             if (activeTab === 'list') {
-                data = data.filter(d => { 
-                    if(!d.data) return false; 
-                    return d.data.split('/')[1] === selectedMonth; 
-                });
+                data = data.filter(d => d.data && d.data.split('/')[1] === selectedMonth);
             }
-
-            if (quickFilter !== 'ALL') {
-              data = data.filter(d => {
-                if (quickFilter === 'LAB') return d.setor.includes('LAB');
-                if (quickFilter === 'COMPRAS') return d.setor.includes('COMPRAS') || d.setor.includes('ADM');
-                return true;
-              });
-            }
-            
             if (searchTerm) {
-              const lowerSearch = searchTerm.toLowerCase();
-              data = data.filter(d => Object.values(d).some(val => String(val).toLowerCase().includes(lowerSearch)));
+              const lower = searchTerm.toLowerCase();
+              data = data.filter(d => Object.values(d).some(val => String(val).toLowerCase().includes(lower)));
             }
-            
             return data.sort((a, b) => compareDates(a.data, b.data)); 
-          }, [deliveries, searchTerm, quickFilter, selectedMonth, viewYear, activeTab]);
+          }, [deliveries, searchTerm, selectedMonth, viewYear, activeTab]);
 
-          // Lógica de Impressão Filtrada pela DATA ESCOLHIDA
           const printData = useMemo(() => {
               if (!printDate) return [];
               const [y, m, d] = printDate.split('-');
-              const targetDateBR = `${d}/${m}/${y}`; 
-
+              const targetBR = `${d}/${m}/${y}`; 
               return deliveries.filter(item => {
-                  const itemDate = item.data.trim();
-                  if (itemDate !== targetDateBR) return false;
-                  
-                  if (onlyPendingPrint) {
-                      const hasObs = item.obs && item.obs.trim().length > 2;
-                      return !hasObs; 
-                  }
-                  return true;
+                  if (item.data.trim() !== targetBR) return false;
+                  return onlyPendingPrint ? (!item.entreguePara || item.entreguePara === '-' || item.entreguePara.length < 2) : true;
               });
           }, [deliveries, printDate, onlyPendingPrint]);
 
           const stats = useMemo(() => {
-            let dataYear = deliveries.filter(d => parseDateYear(d.data) === viewYear);
+            const dataYear = deliveries.filter(d => parseDateYear(d.data) === viewYear);
             const total = dataYear.length;
             const sectorCount = {};
-            const carrierCount = {};
             const monthCount = {};
-            
             dataYear.forEach(d => {
-              let s = d.setor || 'OUTROS';
-              if (s.includes('LAB')) s = 'LABORATÓRIO';
-              sectorCount[s] = (sectorCount[s] || 0) + 1;
-              let t = d.transportadora;
-              carrierCount[t] = (carrierCount[t] || 0) + 1;
-              if(d.data) {
-                const m = d.data.split('/')[1];
-                const label = MONTHS_CONFIG.find(mc => mc.id === m)?.name || m;
-                monthCount[label] = (monthCount[label] || 0) + 1;
-              }
+              sectorCount[d.setor] = (sectorCount[d.setor] || 0) + 1;
+              const m = d.data.split('/')[1];
+              const name = MONTHS_CONFIG.find(mc => mc.id === m)?.name.substring(0,3) || m;
+              monthCount[name] = (monthCount[name] || 0) + 1;
             });
-
             const topSectors = Object.entries(sectorCount).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, value]) => ({ name, value }));
-            const topCarriers = Object.entries(carrierCount).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, value]) => ({ name, value }));
-            const chartData = MONTHS_CONFIG.map(m => ({ name: m.name.substring(0,3), value: monthCount[m.name] || 0 }));
-            const availableMonths = Object.keys(monthCount).length;
-
-            return { total, topSectors, topCarriers, chartData, availableMonths };
+            const chartData = MONTHS_CONFIG.map(m => ({ name: m.name.substring(0,3), value: monthCount[m.name.substring(0,3)] || 0 }));
+            return { total, topSectors, chartData };
           }, [deliveries, viewYear]);
 
-          const availableYears = useMemo(() => {
-             const years = new Set([currentYear]);
-             deliveries.forEach(d => { const y = parseDateYear(d.data); if (y > 2000) years.add(y); });
-             return Array.from(years).sort((a,b) => b-a);
-          }, [deliveries, currentYear]);
-
-          const StatCard = ({ icon: Icon, label, value, subtext, color = "blue", insight = false }) => (
-            <div className={`relative overflow-hidden p-6 rounded-xl border shadow-sm transition-all duration-200 ${insight ? 'bg-gradient-to-br from-indigo-600 to-violet-700 text-white border-transparent' : 'bg-white border-slate-200 hover:shadow-md'}`}>
-              {!insight ? (
-                <>
-                  <div className={`absolute -right-4 -top-4 opacity-[0.08] text-${color}-600 pointer-events-none`}><Icon size={100} strokeWidth={1.5} /></div>
-                  <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-1"><span className={`text-[10px] font-bold text-${color}-600 bg-${color}-50 px-2 py-0.5 rounded uppercase tracking-wider border border-${color}-100`}>{label}</span></div>
-                    <h3 className="text-3xl font-bold text-slate-800 truncate tracking-tight" title={String(value)}>{value}</h3>
-                    <p className="text-xs text-slate-500 mt-2 font-medium flex items-center gap-1">{subtext}</p>
-                  </div>
-                </>
-              ) : (
-                <div className="relative z-10 flex flex-col justify-center h-full">
-                    <div className="flex items-center gap-2 mb-2"><AlertCircle className="text-yellow-300 h-4 w-4" /><span className="text-[10px] font-bold text-indigo-100 uppercase tracking-wide">Insight</span></div>
-                    <p className="text-sm leading-snug font-medium">O setor <strong className="text-white border-b border-indigo-400 pb-0.5">{value}</strong> é o maior recebedor.</p>
-                </div>
-              )}
-            </div>
-          );
+          const getStatusColor = (entregue) => (entregue && entregue !== '-' && entregue.length > 2) ? 'emerald' : 'amber';
+          const getStatusText = (entregue) => (entregue && entregue !== '-' && entregue.length > 2) ? 'Entregue' : 'Pendente';
 
           return (
-            <div className="flex h-screen bg-slate-50 text-slate-800 font-sans overflow-hidden relative">
-              {/* Sidebar Principal */}
-              <div className={`fixed z-40 h-full bg-slate-900 text-white shadow-2xl transition-transform duration-300 flex flex-col w-72 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} no-print`}>
-                <div className="p-6 border-b border-slate-700 flex justify-between items-center whitespace-nowrap">
-                  <div className="flex items-center gap-3"><div className="bg-blue-600 p-2 rounded-lg shadow-lg shadow-blue-900/50"><Package className="h-6 w-6 text-white" /></div><div><h1 className="text-lg font-bold leading-tight">Logística</h1><p className="text-xs text-slate-400 font-medium">Controle {viewYear}</p></div></div>
-                  <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-white"><X size={20} /></button>
+            <div className="flex h-screen bg-slate-100 overflow-hidden relative font-sans text-slate-800">
+              
+              {/* Sidebar Moderna (Drawer) */}
+              <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#0f172a] text-slate-400 transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col shadow-2xl no-print border-r border-slate-800`}>
+                <div className="h-20 flex items-center justify-between px-6 border-b border-slate-800/50 bg-[#0f172a]">
+                    <div className="flex items-center gap-2">
+                        <img src="https://i.postimg.cc/MZyMHZbD/as-02-(1).png" alt="Logo" className="h-6 w-auto object-contain" />
+                        <span className="font-bold text-white tracking-wide text-sm">Menu</span>
+                    </div>
+                    <button onClick={() => setIsSidebarOpen(false)} className="text-slate-500 hover:text-white transition-colors">
+                        <X size={20} />
+                    </button>
                 </div>
-                <nav className="flex-1 p-4 space-y-2 whitespace-nowrap">
-                  <button onClick={() => {setActiveTab('list'); setIsSidebarOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 font-medium ${activeTab === 'list' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20 translate-x-1' : 'text-slate-400 hover:bg-slate-800 hover:text-white hover:translate-x-1'}`}><FileText size={20} /> <span>Relatório Diário</span></button>
-                  <button onClick={() => {setActiveTab('dashboard'); setIsSidebarOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 font-medium ${activeTab === 'dashboard' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20 translate-x-1' : 'text-slate-400 hover:bg-slate-800 hover:text-white hover:translate-x-1'}`}><LayoutDashboard size={20} /> <span>Dashboard Gráfico</span></button>
-                </nav>
-                <div className="p-6 border-t border-slate-800"><p className="text-xs text-slate-400 mb-1">Total Geral ({viewYear})</p><p className="text-3xl font-bold text-white">{stats.total}</p></div>
-              </div>
-              {isSidebarOpen && <div className="fixed inset-0 bg-black/40 backdrop-blur-[1px] z-30 no-print" onClick={() => setIsSidebarOpen(false)}></div>}
 
-              <main className="flex-1 flex flex-col h-full overflow-hidden relative bg-slate-50/50 w-full">
-                <header className="bg-white border-b border-slate-200 px-4 md:px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center shadow-sm z-10 gap-4 no-print">
-                  <div className="flex items-center gap-3 w-full md:w-auto">
-                      <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"><Menu size={24} /></button>
-                      <h2 className="text-xl font-bold text-slate-800 flex items-center gap-3 truncate">
-                        {activeTab === 'dashboard' ? 'Dashboard' : 'Relatório'}
-                        <div className="relative group">
-                            <button className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3 py-1 rounded-full border border-slate-300"><CalendarDays size={12} />{viewYear}<ChevronDown size={12} /></button>
-                            <div className="absolute top-full left-0 mt-1 w-32 bg-white border border-slate-200 rounded-lg shadow-lg hidden group-hover:block z-50 py-1">{availableYears.map(year => (<button key={year} onClick={() => setViewYear(year)} className={`block w-full text-left px-4 py-2 text-xs hover:bg-slate-50 ${viewYear === year ? 'font-bold text-blue-600' : 'text-slate-600'}`}>{year} {year === currentYear ? '(Atual)' : ''}</button>))}</div>
+                <div className="flex-1 overflow-y-auto py-6 px-4 space-y-6">
+                    <div>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-2">Navegação</p>
+                        <nav className="space-y-1">
+                            <button onClick={() => {setActiveTab('list'); setIsSidebarOpen(false)}} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${activeTab === 'list' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/30' : 'hover:bg-slate-800 hover:text-white'}`}>
+                                <FileText size={18} /> <span className="font-medium text-sm">Diário</span>
+                            </button>
+                            <button onClick={() => {setActiveTab('dashboard'); setIsSidebarOpen(false)}} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${activeTab === 'dashboard' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/30' : 'hover:bg-slate-800 hover:text-white'}`}>
+                                <LayoutDashboard size={18} /> <span className="font-medium text-sm">Dashboard</span>
+                            </button>
+                        </nav>
+                    </div>
+                    
+                    <div>
+                        <div className="flex items-center justify-between px-2 mb-3">
+                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Mês de Referência</p>
+                             <div className="bg-slate-800 text-slate-300 text-[10px] font-bold px-1.5 py-0.5 rounded border border-slate-700">{viewYear}</div>
                         </div>
-                      </h2>
-                  </div>
-                  <div className="flex items-center gap-3 w-full md:w-auto justify-end flex-col md:flex-row">
-                      {viewYear === currentYear && (
-                          <button onClick={() => setShowNewYearModal(true)} className="hidden md:flex items-center gap-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg text-xs font-semibold"><CalendarDays size={16} /> Iniciar {currentYear + 1}</button>
-                      )}
-                      
-                      <div className="relative flex flex-col items-center">
-                          <button onClick={handleOpenNew} disabled={viewYear !== currentYear} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium shadow-sm transition-all active:scale-95 ${viewYear !== currentYear ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}><Plus size={18} /> <span className="hidden sm:inline">Nova Entrega</span></button>
-                          {viewYear === currentYear && <div className="absolute top-full mt-1 text-blue-600 animate-bounce flex flex-col items-center"><ArrowUp size={16} className="rotate-180" /><span className="text-[10px] font-bold whitespace-nowrap">Comece aqui</span></div>}
-                      </div>
-                  </div>
-                </header>
+                        <div className="space-y-0.5">
+                            {MONTHS_CONFIG.map(m => (
+                                <button key={m.id} onClick={() => {setSelectedMonth(m.id); setActiveTab('list');}} 
+                                    className={`season-btn w-full flex items-center justify-between text-left px-3 py-2 text-xs rounded-md ${selectedMonth === m.id ? 'active' : 'text-slate-400'}`}>
+                                    <span>{m.name}</span>
+                                    {selectedMonth === m.id && <ChevronRight size={12} className="text-blue-400"/>}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
 
-                {viewYear !== currentYear && (<div className="bg-amber-50 border-b border-amber-100 px-6 py-2 text-xs text-amber-800 flex items-center justify-center gap-2 font-medium no-print"><History size={14} /> Você está visualizando o histórico de {viewYear}. <button onClick={() => setViewYear(currentYear)} className="underline hover:text-amber-900">Voltar para Atual</button></div>)}
+                    {availableYears.length > 1 && (
+                        <div>
+                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-2">Anos Anteriores</p>
+                             <div className="flex flex-wrap gap-2">
+                                 {availableYears.map(year => (
+                                     <button key={year} onClick={() => setViewYear(year)} 
+                                        className={`text-xs px-3 py-1 rounded border transition-colors ${viewYear === year ? 'bg-amber-500/10 text-amber-500 border-amber-500/50' : 'border-slate-700 text-slate-500 hover:border-slate-500'}`}>
+                                         {year}
+                                     </button>
+                                 ))}
+                             </div>
+                        </div>
+                    )}
+                </div>
 
-                <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 space-y-6" id="main-content">
-                  
-                  {viewYear === currentYear && (
-                      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 no-print">
-                          <div className="flex items-center gap-4">
-                              <div className="bg-blue-50 p-3 rounded-full"><FileSpreadsheet className="h-6 w-6 text-blue-600" /></div>
-                              <div>
-                                  <h3 className="font-semibold text-slate-800">Importar Dados Mensais</h3>
-                                  <p className="text-xs text-slate-500">Copie do Excel e cole aqui para preencher rápido.</p>
-                              </div>
-                          </div>
-                          <button onClick={() => setIsImportModalOpen(true)} className="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors">
-                              <ClipboardList size={16} /> Abrir Importador
-                          </button>
-                      </div>
-                  )}
+                <div className="p-4 border-t border-slate-800 bg-[#0f172a]">
+                    <button onClick={() => setIsImportModalOpen(true)} className="flex items-center justify-center gap-2 w-full bg-slate-800 hover:bg-slate-700 text-white text-xs py-3 rounded-xl border border-slate-700 transition-all shadow-sm">
+                        <FileSpreadsheet size={16} className="text-emerald-500" /> Importar
+                    </button>
+                </div>
+              </aside>
 
-                  {activeTab === 'list' ? (
-                    <div className="space-y-6 animate-in fade-in duration-500 h-full flex flex-col">
-                      
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print flex-shrink-0">
-                          <StatCard icon={Package} label={`Total ${viewYear}`} value={stats.total} subtext="Entregas neste ano" color="blue" />
-                          <StatCard icon={Users} label="Setor Top" value={stats.topSectors[0]?.name || '-'} subtext={`${stats.topSectors[0]?.value || 0} recebimentos`} color="teal" />
-                          <StatCard icon={Truck} label="Transp." value={stats.topCarriers[0]?.name || '-'} subtext={`${stats.topCarriers[0]?.value || 0} entregas`} color="orange" />
-                          <StatCard insight value={stats.topSectors[0]?.name || '-'} subtext={`${stats.topSectors[0]?.value} items`} />
-                      </div>
+              {/* Backdrop */}
+              {isSidebarOpen && (
+                  <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity" onClick={() => setIsSidebarOpen(false)}></div>
+              )}
 
-                      <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
-                      
-                        {isMonthSidebarOpen && (
-                            <div className="fixed inset-0 lg:static lg:w-48 bg-white z-30 rounded-xl border border-slate-200 shadow-lg lg:shadow-sm overflow-y-auto flex-shrink-0 no-print animate-in">
-                                <div className="p-4 border-b border-slate-100 flex justify-between items-center">
-                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Meses ({viewYear})</h3>
-                                    <button onClick={() => setIsMonthSidebarOpen(false)} className="lg:hidden text-slate-400"><X size={18} /></button>
-                                </div>
-                                <div className="p-2 space-y-1">
-                                    {MONTHS_CONFIG.map((m) => {
-                                        const isActive = selectedMonth === m.id;
-                                        const Icon = m.icon;
-                                        return (
-                                            <button 
-                                                key={m.id}
-                                                onClick={() => { setSelectedMonth(m.id); setIsMonthSidebarOpen(false); }}
-                                                className={`season-btn w-full text-left px-3 py-3 rounded-lg text-sm flex items-center gap-3 
-                                                ${isActive ? `season-btn-active text-slate-800 bg-white season-${m.season}` : 'text-slate-500 hover:bg-slate-50'}`}
-                                            >
-                                                <Icon size={16} className={`${isActive ? `text-${m.color}-600` : 'text-slate-400'} z-10 relative`} />
-                                                <span className="z-10 relative">{m.name}</span>
-                                                {isActive && (<div className="absolute -bottom-1 -right-1 opacity-20 transform rotate-12 pointer-events-none"><Icon size={40} className={`text-${m.color}-600`} /></div>)}
-                                            </button>
-                                        )
-                                    })}
-                                </div>
+              {/* Conteúdo Principal */}
+              <main className="flex-1 flex flex-col min-w-0 bg-slate-50 relative h-full overflow-hidden">
+                
+                {/* Header Glassmorphism Com Logo */}
+                <header className="h-20 bg-white/90 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-6 shadow-sm z-20 no-print sticky top-0 transition-all">
+                    <div className="flex items-center gap-5">
+                        <button onClick={() => setIsSidebarOpen(true)} className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors shadow-sm border border-slate-200"><Menu size={20} /></button>
+                        
+                        {/* LOGO ADICIONADO AQUI */}
+                        <div className="flex items-center gap-3 pr-4 border-r border-slate-200">
+                             <img src="https://i.postimg.cc/MZyMHZbD/as-02-(1).png" alt="Logo Principal" className="h-8 w-auto object-contain" />
+                        </div>
+
+                        <div className="hidden sm:block">
+                            <h1 className="text-lg font-bold text-slate-800 tracking-tight flex items-center gap-2 leading-none">
+                                {activeTab === 'list' ? <span>Entregas <span className="text-slate-300 font-normal mx-1">/</span> {MONTHS_CONFIG.find(m => m.id === selectedMonth)?.name}</span> : 'Visão Geral'}
+                            </h1>
+                            <p className="text-[11px] text-slate-400 font-medium mt-1 uppercase tracking-wide">Controle Logístico • {viewYear}</p>
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                         {viewYear !== currentYear && (
+                            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-lg text-amber-700 text-xs font-bold animate-pulse">
+                                <History size={14} /> Histórico {viewYear}
                             </div>
                         )}
-
-                        <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden h-full">
-                          <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between bg-white gap-4 no-print flex-shrink-0">
-                            <div className="flex items-center gap-3 w-full sm:w-auto">
-                                <button 
-                                    onClick={() => setIsMonthSidebarOpen(!isMonthSidebarOpen)}
-                                    className="p-2 bg-slate-100 rounded hover:bg-slate-200 flex items-center gap-2 text-sm text-slate-600 font-medium transition-colors"
-                                >
-                                    <CalendarDays size={18} />
-                                    {isMonthSidebarOpen ? 'Ocultar Meses' : 'Mudar Mês'}
-                                </button>
-                                <div className="h-6 w-px bg-slate-200 mx-2 hidden sm:block"></div>
-                                <h3 className="font-bold text-slate-700 flex items-center gap-2 text-sm sm:text-base">
-                                    {MONTHS_CONFIG.find(m => m.id === selectedMonth)?.name}
-                                    <span className="text-xs font-normal text-slate-400 border border-slate-200 rounded px-2 py-0.5 hidden sm:inline-block">{filteredDeliveries.length} entregas</span>
-                                </h3>
-                            </div>
-                            <div className="flex gap-3 w-full sm:w-auto items-center">
-                                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg p-1">
-                                    <input 
-                                        type="date" 
-                                        className="text-xs bg-transparent border-none outline-none text-slate-600 w-24 cursor-pointer" 
-                                        value={printDate}
-                                        onChange={(e) => setPrintDate(e.target.value)}
-                                        title="Selecione a data para imprimir"
-                                    />
-                                    <button onClick={handlePrint} className="p-1.5 bg-slate-800 text-white rounded hover:bg-slate-700 flex items-center gap-1 transition-colors" title="Imprimir">
-                                        <Printer size={14} /> 
-                                        <span className="text-[10px] font-bold">{printData.length}</span>
-                                    </button>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                     <input type="checkbox" id="onlyPending" checked={onlyPendingPrint} onChange={(e) => setOnlyPendingPrint(e.target.checked)} className="cursor-pointer accent-blue-600" />
-                                     <label htmlFor="onlyPending" className="text-[10px] text-slate-500 cursor-pointer select-none">Pendentes</label>
-                                </div>
-                                <div className="relative w-full sm:w-40">
-                                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                    <input type="text" placeholder="Filtrar..." className="w-full pl-10 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                                </div>
-                            </div>
-                          </div>
-
-                          {/* SEÇÃO DE IMPRESSÃO - PRETO NO BRANCO */}
-                          <div id="print-section" className="hidden p-8 bg-white">
-                              <div className="flex justify-between items-center mb-6 border-b pb-4 border-black">
-                                <h1 className="text-xl font-bold text-black">Relação de Entregas - {printDate.split('-').reverse().join('/')}</h1>
-                                <span className="text-sm text-black">{onlyPendingPrint ? "Itens Pendentes" : "Relatório Completo do Dia"}</span>
-                              </div>
-                              <table className="w-full text-xs border-collapse border border-black text-black">
-                                  <thead>
-                                      <tr>
-                                          <th className="border border-black p-2 text-left w-20 font-bold">Data</th>
-                                          <th className="border border-black p-2 text-left font-bold">Remetente</th>
-                                          <th className="border border-black p-2 text-left font-bold">Setor</th>
-                                          <th className="border border-black p-2 text-left font-bold">Entregue Para</th>
-                                          <th className="border border-black p-2 text-left w-40 font-bold">Assinatura / Recebido Por</th>
-                                      </tr>
-                                  </thead>
-                                  <tbody>
-                                      {printData.length > 0 ? printData.map((item, idx) => (
-                                          <tr key={idx}>
-                                              <td className="border border-black p-2">{item.data}</td>
-                                              <td className="border border-black p-2 font-bold">{item.remetente}</td>
-                                              <td className="border border-black p-2">{item.setor}</td>
-                                              <td className="border border-black p-2">{item.entreguePara}</td>
-                                              <td className="border border-black p-2"></td>
-                                          </tr>
-                                      )) : (
-                                          <tr><td colSpan="5" className="border border-black p-4 text-center italic">Nenhum registro encontrado para esta data.</td></tr>
-                                      )}
-                                  </tbody>
-                              </table>
-                          </div>
-
-                          <div className="flex-1 overflow-auto bg-white">
-                            <table className="w-full text-sm text-left">
-                              <thead className="text-xs text-slate-400 uppercase tracking-wider font-semibold sticky top-0 z-10 bg-white border-b border-slate-100 shadow-sm">
-                                <tr>
-                                  <th className="px-6 py-3 bg-white text-center">Data / Rastreio</th>
-                                  <th className="px-6 py-3 bg-white text-center">Remetente</th>
-                                  <th className="px-6 py-3 bg-white text-center">Entrega</th>
-                                  <th className="px-6 py-3 bg-white text-center">Setor</th>
-                                  <th className="px-6 py-3 bg-white w-10"></th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-50">
-                                {filteredDeliveries.length > 0 ? filteredDeliveries.map((item, idx) => {
-                                  const obsAlert = getObsAlert(item.obs);
-                                  const isPending = item.entreguePara === '-' || !item.entreguePara;
-                                  return (
-                                  <tr key={idx} className="hover:bg-slate-50 transition-colors group">
-                                    <td className="px-6 py-3 align-top w-40 text-center">
-                                      <div className="flex flex-col gap-1 items-center">
-                                          <span className="text-xs font-bold text-slate-700">{item.data}</span>
-                                          <div className="flex items-center gap-2"><span className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${getCarrierStyle(item.transportadora)}`}>{item.transportadora}</span></div>
-                                          <span className="font-mono text-[10px] text-slate-400 truncate max-w-[100px]" title={item.doc}>{item.doc}</span>
-                                      </div>
-                                    </td>
-                                    <td className="px-6 py-3 align-top text-center">
-                                       <div className="font-medium text-slate-800 text-sm group-hover:text-blue-700 transition-colors mb-1.5">{item.remetente}</div>
-                                       {item.obs && (
-                                            <div className={`text-xs px-2 py-1.5 rounded border inline-block max-w-md leading-snug font-medium ${obsAlert === 'alert' ? 'bg-orange-50 text-orange-800 border-orange-100' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                                                {obsAlert === 'alert' && <AlertTriangle size={12} className="inline mr-1 -mt-0.5 text-orange-500" />}
-                                                {item.obs}
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-3 align-top w-48 text-center">
-                                       {!isPending ? (
-                                         <div className="flex flex-col gap-1 items-center">
-                                            <div className="flex items-center gap-1.5"><UserCheck size={14} className="text-emerald-600" /><span className="text-xs font-semibold text-slate-700">{item.entreguePara}</span></div>
-                                            {item.quemEntregou && item.quemEntregou !== '-' && (
-                                                <div className="flex items-center gap-1.5 ml-0.5"><span className="text-[10px] text-slate-400">Por: {item.quemEntregou}</span></div>
-                                            )}
-                                         </div>
-                                       ) : (
-                                         <div className="flex items-center gap-1.5 opacity-60 justify-center"><Clock size={14} className="text-slate-400" /><span className="text-xs font-medium text-slate-500 italic">Pendente</span></div>
-                                       )}
-                                    </td>
-                                    <td className="px-6 py-3 align-top w-32 text-center">
-                                        <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${getSectorStyle(item.setor)}`}>{item.setor}</span>
-                                    </td>
-                                    <td className="px-6 py-3 align-middle text-right w-10">
-                                       {viewYear === currentYear && (
-                                           <button onClick={() => handleOpenEdit(item)} className="p-1.5 rounded hover:bg-blue-50 text-slate-300 hover:text-blue-600 transition-all" title="Editar"><Edit3 size={16} /></button>
-                                       )}
-                                    </td>
-                                  </tr>
-                                )}) : (
-                                    <tr><td colSpan="5" className="px-6 py-20 text-center text-slate-400 flex flex-col items-center gap-2"><Package size={32} className="opacity-20" /><span>Nenhuma entrega registrada em {MONTHS_CONFIG.find(m => m.id === selectedMonth)?.name}.</span></td></tr>
-                                )}
-                              </tbody>
-                            </table>
-                          </div>
+                        
+                        <div className="relative group hidden md:block">
+                            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                            <input type="text" placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} 
+                                className="pl-10 pr-4 py-2 w-48 text-sm bg-slate-50 border border-slate-200 rounded-full focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all" 
+                            />
                         </div>
-                      </div>
+
+                        <button onClick={handleOpenNew} disabled={viewYear !== currentYear} 
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold shadow-lg shadow-blue-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 ${viewYear !== currentYear ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+                            <Plus size={18} /> <span className="hidden sm:inline">Nova Entrega</span>
+                        </button>
                     </div>
-                  ) : (
-                     <div className="space-y-6 animate-in fade-in duration-500 h-full flex flex-col">
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
-                          <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
-                            <h3 className="text-base font-bold text-slate-800 mb-6 flex items-center gap-2"><CalendarIcon size={18} className="text-slate-400"/> Fluxo Anual ({viewYear})</h3>
-                            <div className="flex-1 min-h-0"><ResponsiveContainer width="100%" height="100%"><BarChart data={stats.chartData}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" /><XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} /><RechartsTooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} /><Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={40} /></BarChart></ResponsiveContainer></div>
-                          </div>
-                          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
-                            <h3 className="text-base font-bold text-slate-800 mb-6 flex items-center gap-2"><PieChart size={18} className="text-slate-400"/> Por Setor ({viewYear})</h3>
-                            <div className="flex-1 min-h-0"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={stats.topSectors} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">{stats.topSectors.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />))}</Pie><RechartsTooltip /><Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{fontSize: '12px'}} /></PieChart></ResponsiveContainer></div>
-                          </div>
-                        </div>
-                     </div>
-                  )}
+                </header>
+
+                <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 relative scrollbar-hide">
+                   
+                   {/* Layout de Impressão */}
+                   <div id="print-section" className="hidden">
+                       <div className="mb-6 pb-4 border-b-2 border-black flex justify-between items-end">
+                           <div className="flex items-center gap-6">
+                               <img src="https://i.postimg.cc/MZyMHZbD/as-02-(1).png" alt="Logo" className="h-16 w-auto grayscale" />
+                               <div>
+                                   <h1 className="text-3xl font-bold uppercase tracking-tight">Relatório de Logística</h1>
+                                   <p className="text-sm mt-1 text-gray-600">Referência: <strong>{printDate.split('-').reverse().join('/')}</strong></p>
+                               </div>
+                           </div>
+                           <div className="text-right">
+                               <div className="text-xs font-bold uppercase border border-black px-2 py-1 inline-block mb-1">{viewYear}</div>
+                               <p className="text-xs uppercase font-medium">{onlyPendingPrint ? "Lista de Pendências" : "Relatório Geral"}</p>
+                           </div>
+                       </div>
+                       <table className="w-full">
+                           <thead>
+                               <tr className="bg-gray-100">
+                                   <th style={{width: '15%'}} className="uppercase text-xs">Data / Transp.</th>
+                                   <th style={{width: '30%'}} className="uppercase text-xs">Remetente / Documento</th>
+                                   <th style={{width: '15%'}} className="uppercase text-xs">Setor Destino</th>
+                                   <th style={{width: '20%'}} className="uppercase text-xs">Recebido Por</th>
+                                   <th style={{width: '20%'}} className="uppercase text-xs">Assinatura</th>
+                               </tr>
+                           </thead>
+                           <tbody>
+                               {printData.map((d, i) => (
+                                   <tr key={i}>
+                                       <td className="align-top">
+                                           <strong>{d.data}</strong>
+                                           <div style={{fontSize: '9px', marginTop: '4px'}}>{d.transportadora}</div>
+                                       </td>
+                                       <td className="align-top">
+                                           <strong>{d.remetente}</strong>
+                                           <div style={{fontSize: '9px', fontFamily: 'monospace', marginTop: '2px'}}>{d.doc !== '-' ? d.doc : ''}</div>
+                                           {d.obs && <div style={{fontSize: '9px', fontStyle: 'italic', marginTop: '2px'}}>Obs: {d.obs}</div>}
+                                       </td>
+                                       <td className="align-top">{d.setor}</td>
+                                       <td className="align-top">{d.entreguePara}</td>
+                                       <td className="border-b border-black h-8"></td>
+                                   </tr>
+                               ))}
+                               {printData.length === 0 && <tr><td colSpan="5" className="text-center py-8 italic text-gray-500">Nenhum registro encontrado para os critérios selecionados.</td></tr>}
+                           </tbody>
+                       </table>
+                       <div className="fixed bottom-0 left-0 w-full mt-8 pt-4 border-t border-black text-[9px] flex justify-between uppercase">
+                           <span>Gerado automaticamente pelo Sistema de Logística</span>
+                           <span>{new Date().toLocaleString('pt-BR')}</span>
+                       </div>
+                   </div>
+
+                   {/* Dashboard Tab */}
+                   {activeTab === 'dashboard' && (
+                       <div className="space-y-6 animate-in max-w-7xl mx-auto">
+                           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                               <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                                   <div className="flex items-center gap-3 mb-2">
+                                       <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Package size={20}/></div>
+                                       <span className="text-sm font-bold text-slate-500 uppercase tracking-wide">Total {viewYear}</span>
+                                   </div>
+                                   <h3 className="text-4xl font-bold text-slate-800">{stats.total}</h3>
+                                   <p className="text-xs text-slate-400 mt-2 font-medium">encomendas processadas</p>
+                               </div>
+                               <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                                   <div className="flex items-center gap-3 mb-2">
+                                       <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><Building2 size={20}/></div>
+                                       <span className="text-sm font-bold text-slate-500 uppercase tracking-wide">Top Setor</span>
+                                   </div>
+                                   <h3 className="text-2xl font-bold text-slate-800 truncate">{stats.topSectors[0]?.name || '-'}</h3>
+                                   <p className="text-xs text-emerald-600 mt-2 font-bold bg-emerald-50 inline-block px-2 py-0.5 rounded-full">{stats.topSectors[0]?.value || 0} recebimentos</p>
+                               </div>
+                               <div className="bg-gradient-to-br from-indigo-600 to-violet-700 p-6 rounded-2xl shadow-lg shadow-indigo-200 text-white relative overflow-hidden">
+                                   <div className="absolute top-0 right-0 p-4 opacity-10 transform translate-x-4 -translate-y-4"><Package size={100} /></div>
+                                   <div className="relative z-10">
+                                       <p className="text-indigo-100 text-xs font-bold uppercase mb-1">Acesso Rápido</p>
+                                       <h3 className="text-xl font-bold mb-4 leading-tight">Registrar nova encomenda?</h3>
+                                       <button onClick={handleOpenNew} disabled={viewYear !== currentYear} className="w-full bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/20 text-white py-2.5 rounded-xl text-sm font-bold transition-all">
+                                           Abrir Formulário
+                                       </button>
+                                   </div>
+                               </div>
+                           </div>
+                           
+                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[400px]">
+                               <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col">
+                                   <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2"><BarChart size={18} className="text-blue-500"/> Volume Mensal</h4>
+                                   <div className="flex-1 w-full h-72">
+                                       <ResponsiveContainer>
+                                           <BarChart data={stats.chartData}>
+                                               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} dy={10} />
+                                               <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} />
+                                               <RechartsTooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                                               <Bar dataKey="value" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={40} />
+                                           </BarChart>
+                                       </ResponsiveContainer>
+                                   </div>
+                               </div>
+                               <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col">
+                                   <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2"><PieChart size={18} className="text-emerald-500"/> Distribuição por Setor</h4>
+                                   <div className="flex-1 w-full h-72">
+                                       <ResponsiveContainer>
+                                           <PieChart>
+                                               <Pie data={stats.topSectors} innerRadius={80} outerRadius={110} paddingAngle={4} dataKey="value" cornerRadius={6}>
+                                                   {stats.topSectors.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />))}
+                                               </Pie>
+                                               <RechartsTooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                                               <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} wrapperStyle={{fontSize: '12px', color: '#64748b'}} />
+                                           </PieChart>
+                                       </ResponsiveContainer>
+                                   </div>
+                               </div>
+                           </div>
+                       </div>
+                   )}
+
+                   {/* List Tab */}
+                   {activeTab === 'list' && (
+                       <div className="space-y-4 animate-in max-w-7xl mx-auto">
+                           
+                           {/* Filter Bar Moderna */}
+                           <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-wrap gap-4 items-center justify-between no-print">
+                               <div className="flex items-center gap-4">
+                                   <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl transition-all focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-300">
+                                       <CalendarDays size={16} className="text-slate-400"/>
+                                       <input type="date" value={printDate} onChange={e => setPrintDate(e.target.value)} className="bg-transparent border-none text-xs font-bold text-slate-700 focus:ring-0 p-0 outline-none cursor-pointer" />
+                                   </div>
+                                   <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
+                                   <button onClick={() => window.print()} className="flex items-center gap-2 text-slate-600 hover:text-blue-600 px-2 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                                       <Printer size={16} /> <span className="hidden sm:inline">Imprimir Relatório</span>
+                                   </button>
+                               </div>
+                               
+                               <div className="flex items-center gap-4">
+                                   <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer select-none bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors">
+                                       <input type="checkbox" checked={onlyPendingPrint} onChange={e => setOnlyPendingPrint(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500 border-slate-300 w-4 h-4" />
+                                       Apenas Pendentes
+                                   </label>
+                                   <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">Total: {filteredDeliveries.length}</span>
+                               </div>
+                           </div>
+
+                           {/* Tabela Card Moderno */}
+                           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                               <div className="overflow-x-auto">
+                                   <table className="w-full text-left text-sm">
+                                       <thead>
+                                           <tr className="bg-slate-50/80 border-b border-slate-100 text-xs uppercase text-slate-400 font-bold tracking-wider">
+                                               <th className="px-6 py-4 pl-8">Info. Entrega</th>
+                                               <th className="px-6 py-4">Remetente / Docs</th>
+                                               <th className="px-6 py-4">Status Logístico</th>
+                                               <th className="px-6 py-4">Setor</th>
+                                               <th className="px-6 py-4 w-10"></th>
+                                           </tr>
+                                       </thead>
+                                       <tbody className="divide-y divide-slate-50">
+                                           {filteredDeliveries.length > 0 ? filteredDeliveries.map((item) => {
+                                               const statusColor = getStatusColor(item.entreguePara);
+                                               return (
+                                               <tr key={item.id} className="hover:bg-blue-50/30 transition-colors group">
+                                                   <td className="px-6 py-5 pl-8 align-top w-48">
+                                                       <div className="flex flex-col gap-2">
+                                                           <div className="flex items-center gap-2">
+                                                               <span className="text-lg font-bold text-slate-700 tracking-tight leading-none">{item.data.split('/')[0]}</span>
+                                                               <div className="flex flex-col">
+                                                                   <span className="text-[10px] font-bold text-slate-400 uppercase leading-none">{MONTHS_CONFIG.find(m => m.id === item.data.split('/')[1])?.name.substring(0,3)}</span>
+                                                                   <span className="text-[10px] text-slate-300 leading-none">{item.data.split('/')[2]}</span>
+                                                               </div>
+                                                           </div>
+                                                           <div className="flex items-center gap-1.5">
+                                                               <div className={`p-1 rounded ${item.transportadora === 'SEDEX' ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-100 text-slate-500'}`}>
+                                                                    <Truck size={10} strokeWidth={3} />
+                                                               </div>
+                                                               <span className="text-[10px] font-bold text-slate-500 uppercase">{item.transportadora}</span>
+                                                           </div>
+                                                       </div>
+                                                   </td>
+                                                   <td className="px-6 py-5 align-top">
+                                                       <div className="font-bold text-slate-800 text-sm mb-1">{item.remetente}</div>
+                                                       <div className="flex flex-wrap gap-2 items-center">
+                                                           {item.doc && item.doc !== '-' && (
+                                                               <div className="flex items-center gap-1.5 text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                                                                    <Barcode size={10} />
+                                                                    <span className="text-[10px] font-mono">{item.doc}</span>
+                                                               </div>
+                                                           )}
+                                                           {item.obs && (
+                                                               <div className="flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100/50">
+                                                                   <AlertTriangle size={10} />
+                                                                   <span className="text-[10px] font-medium leading-tight max-w-[200px] truncate">{item.obs}</span>
+                                                               </div>
+                                                           )}
+                                                       </div>
+                                                   </td>
+                                                   <td className="px-6 py-5 align-top">
+                                                       <Badge color={statusColor} icon={statusColor === 'emerald' ? CheckCircle2 : Clock} filled={statusColor === 'emerald'}>
+                                                           {getStatusText(item.entreguePara)}
+                                                       </Badge>
+                                                       {statusColor === 'emerald' && (
+                                                           <div className="mt-2 flex items-start gap-2">
+                                                               <div className="mt-0.5 h-1.5 w-1.5 rounded-full bg-emerald-200"></div>
+                                                               <div>
+                                                                   <p className="text-[11px] font-bold text-slate-700 leading-none">{item.entreguePara}</p>
+                                                                   {item.quemEntregou && <p className="text-[10px] text-slate-400 mt-0.5">Entregue por: {item.quemEntregou}</p>}
+                                                               </div>
+                                                           </div>
+                                                       )}
+                                                   </td>
+                                                   <td className="px-6 py-5 align-top">
+                                                       <Badge color="indigo" icon={Building2}>{item.setor}</Badge>
+                                                   </td>
+                                                   <td className="px-6 py-5 text-right">
+                                                       {viewYear === currentYear && (
+                                                           <button onClick={() => handleOpenEdit(item)} className="p-2 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all transform hover:scale-110">
+                                                               <Edit3 size={16} />
+                                                           </button>
+                                                       )}
+                                                   </td>
+                                               </tr>
+                                           )}) : (
+                                               <tr>
+                                                   <td colSpan="5" className="px-6 py-20 text-center">
+                                                       <div className="flex flex-col items-center justify-center text-slate-300">
+                                                           <div className="bg-slate-50 p-4 rounded-full mb-3">
+                                                               <Package size={40} strokeWidth={1.5} className="text-slate-200" />
+                                                           </div>
+                                                           <p className="text-sm font-bold text-slate-400">Nenhum registro encontrado.</p>
+                                                           <p className="text-xs text-slate-300 mt-1">Tente ajustar os filtros ou adicione uma nova entrega.</p>
+                                                       </div>
+                                                   </td>
+                                               </tr>
+                                           )}
+                                       </tbody>
+                                   </table>
+                               </div>
+                           </div>
+                       </div>
+                   )}
                 </div>
               </main>
 
-              {isImportModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden">
-                    <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                        <div><h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><FileSpreadsheet className="text-blue-600" /> Importador de Dados</h3><p className="text-xs text-slate-500">Cole os dados do seu Excel abaixo.</p></div>
-                        <button onClick={() => setIsImportModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={24} /></button>
-                    </div>
-                    <div className="flex-1 p-6 flex flex-col gap-4 overflow-hidden">
-                        <div className="flex items-center gap-4">
-                            <div className="w-48"><label className="text-xs font-semibold text-slate-500 uppercase mb-1 block">Mês de Referência</label><select value={importForm.month} onChange={(e) => setImportForm({...importForm, month: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg bg-white text-sm">{MONTHS_CONFIG.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select></div>
-                            <div className="flex-1 bg-blue-50 text-blue-700 text-xs p-3 rounded-lg border border-blue-100"><strong>Dica:</strong> O sistema ignora cabeçalhos automaticamente. Cole apenas as células do Excel.</div>
-                        </div>
-                        <textarea className="flex-1 w-full p-4 border border-slate-300 rounded-xl font-mono text-xs leading-relaxed focus:ring-2 focus:ring-blue-500 outline-none resize-none" placeholder={`Cole aqui suas linhas do Excel...\nExemplo:\n01/01/2025\tEmpresa X\tSedex\t12345\tJoão\tTI\tEntregue\n02/01/2025\tEmpresa Y\tDHL\t54321\tMaria\tRH\t-`} value={importForm.textData} onChange={(e) => setImportForm({...importForm, textData: e.target.value})}></textarea>
-                    </div>
-                    <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center"><button onClick={() => setIsImportModalOpen(false)} className="px-6 py-3 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors">Cancelar</button><div className="flex gap-3"><button onClick={handleProcessImport} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-lg shadow-blue-900/20 flex items-center gap-2"><CheckCircle2 size={18} /> Processar e Adicionar</button><button onClick={() => setIsImportModalOpen(false)} className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-lg shadow-emerald-900/20">Finalizar Importação</button></div></div>
-                  </div>
-                </div>
-              )}
-
+              {/* MODAL NOVA ENTREGA - Redesenhado */}
               {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-                    <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                      <h3 className="text-lg font-bold text-slate-800">{editingId !== null ? 'Editar Entrega' : `Nova Entrega ${currentYear}`}</h3>
-                      <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={24} /></button>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in">
+                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] ring-1 ring-white/10">
+                    <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
+                      <div>
+                          <h3 className="text-xl font-bold text-slate-800">{editingId ? 'Editar Registo' : 'Nova Encomenda'}</h3>
+                          <p className="text-xs font-medium text-slate-400 mt-0.5">Preencha os detalhes logísticos abaixo.</p>
+                      </div>
+                      <button onClick={() => setIsModalOpen(false)} className="bg-slate-50 p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"><X size={20} /></button>
                     </div>
-                    <form onSubmit={handleSaveDelivery} className="p-6 space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1 relative group tooltip-trigger"><label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">Data <HelpCircle size={12} className="text-slate-400"/></label><div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Data que a encomenda chegou na portaria.</div><input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="DD/MM/AAAA" value={newDeliveryForm.data} onChange={e => setNewDeliveryForm({...newDeliveryForm, data: e.target.value})} /></div>
-                        <div className="space-y-1 relative group tooltip-trigger"><label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">Rastreio / Doc <HelpCircle size={12} className="text-slate-400"/></label><div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Código de rastreio dos Correios ou número da Nota Fiscal.</div><input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Código" value={newDeliveryForm.doc} onChange={e => setNewDeliveryForm({...newDeliveryForm, doc: e.target.value})} /></div>
+                    
+                    <form onSubmit={handleSaveDelivery} className="flex-1 overflow-y-auto p-8 bg-slate-50/50">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          
+                          {/* Coluna 1 */}
+                          <div className="space-y-5">
+                              <div className="flex items-center gap-2 text-blue-600 mb-2">
+                                  <Box size={16} strokeWidth={2.5}/>
+                                  <span className="text-xs font-bold uppercase tracking-wider">Detalhes da Carga</span>
+                              </div>
+                              
+                              <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-1.5">
+                                      <label className="text-[11px] font-bold text-slate-500 uppercase">Data Recebimento</label>
+                                      <input required type="text" placeholder="DD/MM/AAAA" className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-medium" value={newDeliveryForm.data} onChange={e => setNewDeliveryForm({...newDeliveryForm, data: e.target.value})} />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                      <label className="text-[11px] font-bold text-slate-500 uppercase">Documento / NF</label>
+                                      <input type="text" placeholder="Ex: 55432" className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-medium" value={newDeliveryForm.doc} onChange={e => setNewDeliveryForm({...newDeliveryForm, doc: e.target.value})} />
+                                  </div>
+                              </div>
+                              
+                              <div className="space-y-1.5">
+                                  <label className="text-[11px] font-bold text-slate-500 uppercase">Remetente</label>
+                                  <input required type="text" placeholder="Empresa ou Pessoa" className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-medium" value={newDeliveryForm.remetente} onChange={e => setNewDeliveryForm({...newDeliveryForm, remetente: e.target.value})} />
+                              </div>
+
+                              <div className="space-y-1.5">
+                                  <label className="text-[11px] font-bold text-slate-500 uppercase">Transportadora</label>
+                                  <div className="relative">
+                                      <select className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-medium appearance-none" value={newDeliveryForm.transportadora} onChange={e => setNewDeliveryForm({...newDeliveryForm, transportadora: e.target.value})}>
+                                          <option value="">Selecione a empresa...</option>
+                                          <option value="SEDEX">Correios / Sedex</option>
+                                          <option value="PAC">Correios / PAC</option>
+                                          <option value="FEDEX">FedEx Express</option>
+                                          <option value="DHL">DHL Logistics</option>
+                                          <option value="AZUL">Azul Cargo</option>
+                                          <option value="MOTOBOY">Motoboy / Entregador</option>
+                                          <option value="OUTROS">Outros</option>
+                                      </select>
+                                      <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"/>
+                                  </div>
+                              </div>
+                          </div>
+
+                          {/* Coluna 2 */}
+                          <div className="space-y-5">
+                              <div className="flex items-center gap-2 text-emerald-600 mb-2">
+                                  <MapPin size={16} strokeWidth={2.5}/>
+                                  <span className="text-xs font-bold uppercase tracking-wider">Encaminhamento</span>
+                              </div>
+
+                              <div className="space-y-1.5">
+                                  <label className="text-[11px] font-bold text-slate-500 uppercase">Setor Destino</label>
+                                  <input required type="text" placeholder="Ex: RH, TI, Manutenção" className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all font-medium" value={newDeliveryForm.setor} onChange={e => setNewDeliveryForm({...newDeliveryForm, setor: e.target.value})} />
+                              </div>
+
+                              <div className="p-5 bg-white rounded-xl border border-slate-200 shadow-sm space-y-4">
+                                  <div className="flex items-center gap-2 text-slate-400 border-b border-slate-100 pb-2">
+                                      <UserCheck size={14} /> <span className="text-[10px] uppercase font-bold tracking-wider">Baixa de Entrega</span>
+                                  </div>
+                                  <div className="space-y-1.5">
+                                      <label className="text-[10px] font-bold text-slate-400">Recebido Por</label>
+                                      <input type="text" placeholder="Nome do Funcionário" className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-emerald-500 outline-none transition-all" value={newDeliveryForm.entreguePara} onChange={e => setNewDeliveryForm({...newDeliveryForm, entreguePara: e.target.value})} />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                      <label className="text-[10px] font-bold text-slate-400">Entregue Por (Logística)</label>
+                                      <input type="text" placeholder="Seu nome" className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-emerald-500 outline-none transition-all" value={newDeliveryForm.quemEntregou} onChange={e => setNewDeliveryForm({...newDeliveryForm, quemEntregou: e.target.value})} />
+                                  </div>
+                              </div>
+                          </div>
                       </div>
-                      <div className="space-y-1 relative group tooltip-trigger"><label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">Remetente <HelpCircle size={12} className="text-slate-400"/></label><div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Nome da empresa ou pessoa que enviou a encomenda.</div><input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.remetente} onChange={e => setNewDeliveryForm({...newDeliveryForm, remetente: e.target.value})} /></div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Transportadora</label><select className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white" value={newDeliveryForm.transportadora} onChange={e => setNewDeliveryForm({...newDeliveryForm, transportadora: e.target.value})}><option value="">Selecione...</option><option value="SEDEX">Correios / Sedex</option><option value="PAC">Correios / PAC</option><option value="FEDEX">FedEx</option><option value="DHL">DHL</option><option value="JADLOG">Jadlog</option><option value="MOTOBOY">Motoboy</option><option value="OUTROS">Outros</option></select></div>
-                        <div className="space-y-1 relative group tooltip-trigger"><label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">Setor <HelpCircle size={12} className="text-slate-400"/></label><div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Departamento de destino (Ex: Compras, RH, TI).</div><input required type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.setor} onChange={e => setNewDeliveryForm({...newDeliveryForm, setor: e.target.value})} /></div>
+
+                      <div className="mt-8 space-y-1.5">
+                          <label className="text-[11px] font-bold text-slate-500 uppercase">Observações Adicionais</label>
+                          <textarea rows="2" className="w-full px-4 py-3 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none transition-all" placeholder="Informações sobre avarias, volumes extras ou instruções especiais..." value={newDeliveryForm.obs} onChange={e => setNewDeliveryForm({...newDeliveryForm, obs: e.target.value})}></textarea>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                         <div className="space-y-1 relative group tooltip-trigger"><label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">Entregue Para <HelpCircle size={12} className="text-slate-400"/></label><div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Quem recebeu a encomenda (assinou). Deixe em branco se pendente.</div><input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.entreguePara} onChange={e => setNewDeliveryForm({...newDeliveryForm, entreguePara: e.target.value})} /></div>
-                         <div className="space-y-1 relative group tooltip-trigger"><label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 cursor-help">Entregue Por <HelpCircle size={12} className="text-slate-400"/></label><div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg z-50">Funcionário da logística que realizou a entrega.</div><input type="text" className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newDeliveryForm.quemEntregou} onChange={e => setNewDeliveryForm({...newDeliveryForm, quemEntregou: e.target.value})} /></div>
-                      </div>
-                      <div className="space-y-1"><label className="text-xs font-semibold text-slate-500 uppercase">Observações</label><textarea className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-20 resize-none" value={newDeliveryForm.obs} onChange={e => setNewDeliveryForm({...newDeliveryForm, obs: e.target.value})}></textarea></div>
-                      <div className="pt-4 flex gap-3"><button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 font-medium">Cancelar</button><button type="submit" className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"><Save size={18} /> {editingId !== null ? 'Atualizar' : 'Salvar Entrada'}</button></div>
                     </form>
+
+                    <div className="p-5 bg-white border-t border-slate-100 flex justify-end gap-3 sticky bottom-0 z-10">
+                        <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors">Cancelar</button>
+                        <button onClick={handleSaveDelivery} className="px-8 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/30 flex items-center gap-2 transform hover:-translate-y-0.5 transition-all">
+                            <Save size={18} /> Confirmar Registo
+                        </button>
+                    </div>
                   </div>
                 </div>
               )}
 
-              {showNewYearModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-                    <div className="p-6 text-center space-y-4">
-                        <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto"><CalendarDays className="text-blue-600 h-8 w-8" /></div>
-                        <h3 className="text-xl font-bold text-slate-800">Deseja iniciar o ano {currentYear + 1}?</h3>
-                        <p className="text-slate-500 text-sm">Ao confirmar, o relatório de <strong>{currentYear}</strong> será arquivado como histórico e o painel será preparado para novos registros de <strong>{currentYear + 1}</strong>.</p>
-                        <div className="pt-4 flex gap-3"><button onClick={() => setShowNewYearModal(false)} className="flex-1 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 font-medium">Cancelar</button><button onClick={handleStartNewYear} className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg">Sim, Iniciar {currentYear + 1}</button></div>
-                    </div>
+              {/* MODAL IMPORTAÇÃO SIMPLIFICADO */}
+              {isImportModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in">
+                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl h-[70vh] flex flex-col overflow-hidden">
+                      <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                          <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><FileSpreadsheet className="text-emerald-600"/> Importação em Massa</h3>
+                          <button onClick={() => setIsImportModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={24}/></button>
+                      </div>
+                      <div className="flex-1 p-6 flex flex-col gap-4">
+                          <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl text-sm text-blue-800 flex gap-3 items-start">
+                              <div className="mt-0.5"><HelpCircle size={16}/></div>
+                              <div>
+                                  <strong>Instruções:</strong> Copie as células do seu Excel e cole abaixo.
+                                  <br/>A ordem das colunas deve ser: <code className="bg-white px-1 py-0.5 rounded border border-blue-200 text-xs font-bold">Data</code> <code className="bg-white px-1 py-0.5 rounded border border-blue-200 text-xs font-bold">Remetente</code> <code className="bg-white px-1 py-0.5 rounded border border-blue-200 text-xs font-bold">Transportadora</code> <code className="bg-white px-1 py-0.5 rounded border border-blue-200 text-xs font-bold">Doc</code> <code className="bg-white px-1 py-0.5 rounded border border-blue-200 text-xs font-bold">Recebedor</code>
+                              </div>
+                          </div>
+                          <textarea className="flex-1 w-full border border-slate-300 rounded-xl p-4 font-mono text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none resize-none leading-relaxed" placeholder="Cole seus dados aqui..." value={importForm.textData} onChange={e => setImportForm({...importForm, textData: e.target.value})}></textarea>
+                      </div>
+                      <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+                          <button onClick={() => setIsImportModalOpen(false)} className="px-6 py-2.5 text-slate-600 font-bold hover:bg-slate-200 rounded-xl text-sm transition-colors">Cancelar</button>
+                          <button onClick={handleProcessImport} className="px-8 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2">
+                              <CheckCircle2 size={18}/> Processar Dados
+                          </button>
+                      </div>
                   </div>
                 </div>
               )}
+
             </div>
           );
         }
@@ -764,6 +768,7 @@
     </script>
 </body>
 </html>
+
 
 
 
