@@ -42,9 +42,9 @@
             
             /* Tabela de impressão mais espaçada para assinatura */
             table { width: 100% !important; border-collapse: collapse !important; border: 1px solid #000; }
-            th, td { border: 1px solid #000 !important; padding: 10px 8px !important; font-size: 12px !important; text-align: left; vertical-align: middle; }
+            th, td { border: 1px solid #000 !important; padding: 8px 8px !important; font-size: 11px !important; text-align: left; vertical-align: middle; }
             th { background-color: #eee !important; font-weight: bold; text-transform: uppercase; }
-            .assinatura-col { height: 50px; } /* Espaço maior para assinar */
+            .assinatura-col { height: 60px; vertical-align: bottom !important; } /* Espaço maior para assinar */
         }
     </style>
 
@@ -81,7 +81,7 @@
           Package, Truck, Users, FileText, LayoutDashboard, X, CheckCircle2,
           Calendar as CalendarIcon, UserCheck, Search as SearchIcon, AlertTriangle,
           Menu, Plus, Save, Edit3, Clock, CalendarDays, ChevronDown, History, ClipboardList, FileSpreadsheet,
-          Printer, HelpCircle, ArrowRight, Box, Barcode, MapPin, Building2, User, ChevronRight, Filter, TrendingUp, Trash2, CheckSquare
+          Printer, HelpCircle, ArrowRight, Box, Barcode, MapPin, Building2, User, ChevronRight, Filter, TrendingUp, Trash2, CheckSquare, ListChecks
         } from 'lucide-react';
 
         // --- Configuração Firebase ---
@@ -159,6 +159,7 @@
           const [onlyPendingPrint, setOnlyPendingPrint] = useState(true);
 
           // Estado para seleção manual de impressão
+          const [isSelectionMode, setIsSelectionMode] = useState(false);
           const [selectedIds, setSelectedIds] = useState(new Set());
 
           const [newDeliveryForm, setNewDeliveryForm] = useState({
@@ -222,7 +223,6 @@
              if (password === 'admin123') {
                  try {
                      await deleteDoc(doc(db, "entregas", id));
-                     // Atualiza a seleção caso o item excluído estivesse selecionado
                      const newSet = new Set(selectedIds);
                      if (newSet.has(id)) {
                          newSet.delete(id);
@@ -288,6 +288,17 @@
               }
           };
 
+          const toggleSelectionMode = () => {
+              if (isSelectionMode) {
+                  // Cancelar
+                  setIsSelectionMode(false);
+                  setSelectedIds(new Set());
+              } else {
+                  // Ativar
+                  setIsSelectionMode(true);
+              }
+          };
+
           const filteredDeliveries = useMemo(() => {
             let data = deliveries.filter(d => parseDateYear(d.data) === viewYear);
             if (activeTab === 'list') {
@@ -301,24 +312,25 @@
           }, [deliveries, searchTerm, selectedMonth, viewYear, activeTab]);
 
           const printData = useMemo(() => {
-              // MODO 1: Se o usuário selecionou itens manualmente, imprime APENAS eles.
-              if (selectedIds.size > 0) {
+              // MODO 1: Se estiver em modo de seleção E tiver itens selecionados, imprime APENAS eles.
+              if (isSelectionMode && selectedIds.size > 0) {
                   return deliveries.filter(d => selectedIds.has(d.id));
               }
 
-              // MODO 2 (Fallback): Lógica antiga baseada em data se nada estiver selecionado
+              // MODO 2 (Fallback): Imprime com base na data do filtro, se não houver seleção manual
               if (!printDate) return [];
               const [y, m, d] = printDate.split('-');
               const targetBR = `${d}/${m}/${y}`; 
               
               const dayItems = deliveries.filter(item => item.data.trim() === targetBR);
               
+              // LÓGICA ATUALIZADA: Pendentes são aqueles SEM OBSERVAÇÃO
               if (onlyPendingPrint) {
-                  return dayItems.filter(item => !item.entreguePara || item.entreguePara === '-' || item.entreguePara.length < 2);
+                  return dayItems.filter(item => !item.obs || item.obs.trim() === '');
               }
               
               return dayItems;
-          }, [deliveries, printDate, onlyPendingPrint, selectedIds]);
+          }, [deliveries, printDate, onlyPendingPrint, selectedIds, isSelectionMode]);
 
           const stats = useMemo(() => {
             const dataYear = deliveries.filter(d => parseDateYear(d.data) === viewYear);
@@ -464,7 +476,7 @@
                                <div>
                                    <h1 className="text-2xl font-bold uppercase tracking-tight">Protocolo de Entrega</h1>
                                    <p className="text-xs mt-0.5 text-black">
-                                       {selectedIds.size > 0 
+                                       {isSelectionMode && selectedIds.size > 0 
                                            ? <span>Itens Selecionados: <strong>{selectedIds.size} volumes</strong></span> 
                                            : <span>Data de Referência: <strong>{printDate.split('-').reverse().join('/')}</strong></span>
                                        }
@@ -474,7 +486,7 @@
                            <div className="text-right">
                                <div className="text-[10px] font-bold uppercase border border-black px-2 py-0.5 inline-block mb-1">{viewYear}</div>
                                <p className="text-[10px] uppercase font-bold">
-                                   {selectedIds.size > 0 ? "Impressão Personalizada" : (onlyPendingPrint ? "Lista de Pendências" : "Relatório Geral")}
+                                   {isSelectionMode && selectedIds.size > 0 ? "Impressão Personalizada" : (onlyPendingPrint ? "Itens Sem Observação (Pendentes)" : "Relatório Geral")}
                                </p>
                            </div>
                        </div>
@@ -502,15 +514,19 @@
                                        </td>
                                        <td>{d.doc !== '-' ? d.doc : ''}</td>
                                        <td className="font-bold">{d.setor}</td>
-                                       <td className="assinatura-col">
-                                            {/* Se já foi entregue (e estamos imprimindo tudo), mostra o nome. Senão, linha para assinar */}
+                                       <td className="assinatura-col relative">
+                                            {/* Se já foi entregue (obs preenchida), mostra o nome/obs. Senão, linha para assinar e preencher setor */}
                                             {d.entreguePara && d.entreguePara !== '-' && d.entreguePara.length > 1 ? (
                                                 <div className="text-xs">
                                                     Entregue para: <strong>{d.entreguePara}</strong>
                                                 </div>
                                             ) : (
-                                                <div className="border-b border-black w-full h-8 mt-2 relative">
-                                                    <span className="absolute bottom-[-12px] right-0 text-[8px] italic">Data: ___/___/___</span>
+                                                <div className="w-full h-full flex flex-col justify-end pb-1">
+                                                    <div className="border-b border-black w-full mb-2"></div>
+                                                    <div className="flex justify-between items-end w-full px-1">
+                                                        <span className="text-[9px]">Setor: __________________</span>
+                                                        <span className="text-[8px] italic">Data: ___/___</span>
+                                                    </div>
                                                 </div>
                                             )}
                                        </td>
@@ -597,25 +613,25 @@
                            {/* Filter Bar Moderna */}
                            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-wrap gap-4 items-center justify-between no-print sticky top-0 z-10">
                                <div className="flex items-center gap-4">
-                                   {/* Controles de Impressão Inteligentes */}
-                                   <button onClick={() => window.print()} 
-                                       className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md 
-                                       ${selectedIds.size > 0 
-                                           ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/30' 
-                                           : 'bg-slate-800 hover:bg-slate-900 text-white'}`}>
-                                       <Printer size={16} /> 
-                                       <span>
-                                           {selectedIds.size > 0 ? `Imprimir Selecionados (${selectedIds.size})` : 'Imprimir Protocolo do Dia'}
-                                       </span>
-                                   </button>
                                    
-                                   {selectedIds.size > 0 && (
-                                       <button onClick={() => setSelectedIds(new Set())} className="text-xs font-bold text-red-500 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors">
-                                           Limpar Seleção
+                                   {/* Botão de Controle Principal */}
+                                   {isSelectionMode ? (
+                                       <div className="flex items-center gap-2 animate-in">
+                                           <button onClick={() => window.print()} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/30">
+                                               <Printer size={16} /> <span>Imprimir ({selectedIds.size}) Selecionados</span>
+                                           </button>
+                                           <button onClick={toggleSelectionMode} className="text-xs font-bold text-red-500 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors border border-transparent hover:border-red-100">
+                                               Cancelar Seleção
+                                           </button>
+                                       </div>
+                                   ) : (
+                                       <button onClick={toggleSelectionMode} className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md">
+                                           <ListChecks size={16} /> <span>Selecionar para Impressão</span>
                                        </button>
                                    )}
-                                   
-                                   {selectedIds.size === 0 && (
+
+                                   {/* Filtros Padrão (só aparecem se NÃO estiver selecionando, para não confundir) */}
+                                   {!isSelectionMode && (
                                        <>
                                            <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
                                            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl">
@@ -624,8 +640,11 @@
                                            </div>
                                             <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer select-none">
                                                 <input type="checkbox" checked={onlyPendingPrint} onChange={e => setOnlyPendingPrint(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500 border-slate-300 w-3.5 h-3.5" />
-                                                <span>Apenas Pendentes</span>
+                                                <span>Apenas Sem Observação (Pendentes)</span>
                                             </label>
+                                            <button onClick={() => window.print()} className="p-2 text-slate-400 hover:text-blue-600 transition-colors" title="Imprimir Rápida (Dia atual)">
+                                                <Printer size={18} />
+                                            </button>
                                        </>
                                    )}
                                </div>
@@ -641,14 +660,16 @@
                                    <table className="w-full text-left text-sm">
                                        <thead>
                                            <tr className="bg-slate-50/80 border-b border-slate-100 text-xs uppercase text-slate-400 font-bold tracking-wider">
-                                               <th className="px-4 py-4 w-12 text-center">
-                                                   <input type="checkbox" 
-                                                       className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
-                                                       checked={filteredDeliveries.length > 0 && selectedIds.size === filteredDeliveries.length}
-                                                       onChange={() => toggleSelectAll(filteredDeliveries)}
-                                                   />
-                                               </th>
-                                               <th className="px-6 py-4">Info. Entrega</th>
+                                               {isSelectionMode && (
+                                                   <th className="px-4 py-4 w-12 text-center animate-in">
+                                                       <input type="checkbox" 
+                                                           className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+                                                           checked={filteredDeliveries.length > 0 && selectedIds.size === filteredDeliveries.length}
+                                                           onChange={() => toggleSelectAll(filteredDeliveries)}
+                                                       />
+                                                   </th>
+                                               )}
+                                               <th className={`px-6 py-4 ${!isSelectionMode ? 'pl-8' : ''}`}>Info. Entrega</th>
                                                <th className="px-6 py-4">Remetente / Docs</th>
                                                <th className="px-6 py-4">Status Logístico</th>
                                                <th className="px-6 py-4">Setor</th>
@@ -661,14 +682,16 @@
                                                const isSelected = selectedIds.has(item.id);
                                                return (
                                                <tr key={item.id} className={`hover:bg-blue-50/30 transition-colors group ${isSelected ? 'bg-blue-50/40' : ''}`}>
-                                                   <td className="px-4 py-5 text-center align-top pt-8">
-                                                       <input type="checkbox" 
-                                                           className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
-                                                           checked={isSelected}
-                                                           onChange={() => toggleSelection(item.id)}
-                                                       />
-                                                   </td>
-                                                   <td className="px-6 py-5 align-top w-48">
+                                                   {isSelectionMode && (
+                                                       <td className="px-4 py-5 text-center align-top pt-8 animate-in">
+                                                           <input type="checkbox" 
+                                                               className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+                                                               checked={isSelected}
+                                                               onChange={() => toggleSelection(item.id)}
+                                                           />
+                                                       </td>
+                                                   )}
+                                                   <td className={`px-6 py-5 align-top w-48 ${!isSelectionMode ? 'pl-8' : ''}`}>
                                                        <div className="flex flex-col gap-2">
                                                            <div className="flex items-center gap-2">
                                                                <span className="text-lg font-bold text-slate-700 tracking-tight leading-none">{item.data.split('/')[0]}</span>
@@ -734,7 +757,7 @@
                                                </tr>
                                            )}) : (
                                                <tr>
-                                                   <td colSpan="6" className="px-6 py-20 text-center">
+                                                   <td colSpan={isSelectionMode ? 6 : 5} className="px-6 py-20 text-center">
                                                        <div className="flex flex-col items-center justify-center text-slate-300">
                                                            <div className="bg-slate-50 p-4 rounded-full mb-3">
                                                                <Package size={40} strokeWidth={1.5} className="text-slate-200" />
@@ -891,6 +914,7 @@
     </script>
 </body>
 </html>
+
 
 
 
