@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Logística 2026</title>
+    <title>Painel de Logística 2026 - Admin</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -28,7 +28,7 @@
         .season-btn:hover { background-color: rgba(255,255,255,0.05); }
         .season-btn.active { background-color: rgba(255,255,255,0.1); border-left-color: #60a5fa; color: white; font-weight: 600; }
 
-        /* Estilo de Impressão Otimizado */
+        /* Estilo de Impressão Otimizado - Protocolo */
         @media print {
             body * { visibility: hidden; }
             #print-section, #print-section * { visibility: visible; }
@@ -39,9 +39,12 @@
             }
             @page { margin: 1cm; size: landscape; }
             .no-print { display: none !important; }
-            table { width: 100% !important; border-collapse: collapse !important; }
-            th, td { border-bottom: 1px solid #ddd !important; padding: 8px 4px !important; font-size: 11px !important; text-align: left; }
-            th { border-bottom: 2px solid #000 !important; font-weight: bold; }
+            
+            /* Tabela de impressão mais espaçada para assinatura */
+            table { width: 100% !important; border-collapse: collapse !important; border: 1px solid #000; }
+            th, td { border: 1px solid #000 !important; padding: 10px 8px !important; font-size: 12px !important; text-align: left; vertical-align: middle; }
+            th { background-color: #eee !important; font-weight: bold; text-transform: uppercase; }
+            .assinatura-col { height: 50px; } /* Espaço maior para assinar */
         }
     </style>
 
@@ -69,7 +72,7 @@
         import React, { useState, useMemo, useEffect } from 'react';
         import ReactDOM from 'react-dom/client';
         import { initializeApp } from "firebase/app";
-        import { getFirestore, collection, addDoc, query, orderBy, updateDoc, doc, onSnapshot } from "firebase/firestore";
+        import { getFirestore, collection, addDoc, query, orderBy, updateDoc, doc, onSnapshot, deleteDoc } from "firebase/firestore";
         import { 
           BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, 
           PieChart, Pie, Cell 
@@ -78,7 +81,7 @@
           Package, Truck, Users, FileText, LayoutDashboard, X, CheckCircle2,
           Calendar as CalendarIcon, UserCheck, Search as SearchIcon, AlertTriangle,
           Menu, Plus, Save, Edit3, Clock, CalendarDays, ChevronDown, History, ClipboardList, FileSpreadsheet,
-          Printer, HelpCircle, ArrowRight, Box, Barcode, MapPin, Building2, User, ChevronRight, Filter, TrendingUp
+          Printer, HelpCircle, ArrowRight, Box, Barcode, MapPin, Building2, User, ChevronRight, Filter, TrendingUp, Trash2
         } from 'lucide-react';
 
         // --- Configuração Firebase ---
@@ -182,6 +185,13 @@
 
           const handleSaveDelivery = async (e) => {
             e.preventDefault();
+            
+            // Pergunta de segurança se estiver marcando como entregue
+            if (newDeliveryForm.entreguePara && newDeliveryForm.entreguePara.length > 2) {
+                const confirmDelivery = window.confirm(`Atenção:\n\nVocê preencheu que este item foi recebido por: ${newDeliveryForm.entreguePara}.\n\nConfirma que este item já foi entregue?`);
+                if (!confirmDelivery) return;
+            }
+
             const newEntry = {
               ...newDeliveryForm,
               remetente: newDeliveryForm.remetente.toUpperCase(),
@@ -202,6 +212,20 @@
             } catch (error) {
                 alert("Erro ao salvar: " + error.message);
             }
+          };
+
+          const handleDelete = async (id) => {
+             const password = window.prompt("DIGITE A SENHA DE ADMINISTRADOR PARA EXCLUIR:");
+             if (password === 'admin123') {
+                 try {
+                     await deleteDoc(doc(db, "entregas", id));
+                     // Não precisa de alert, o realtime atualiza
+                 } catch (error) {
+                     alert("Erro ao excluir: " + error.message);
+                 }
+             } else if (password !== null) {
+                 alert("Senha incorreta!");
+             }
           };
 
           const handleOpenNew = () => {
@@ -250,10 +274,15 @@
               if (!printDate) return [];
               const [y, m, d] = printDate.split('-');
               const targetBR = `${d}/${m}/${y}`; 
-              return deliveries.filter(item => {
-                  if (item.data.trim() !== targetBR) return false;
-                  return onlyPendingPrint ? (!item.entreguePara || item.entreguePara === '-' || item.entreguePara.length < 2) : true;
-              });
+              
+              const dayItems = deliveries.filter(item => item.data.trim() === targetBR);
+              
+              if (onlyPendingPrint) {
+                  // Retorna apenas itens onde NÃO há recebedor definido (pendentes de assinatura)
+                  return dayItems.filter(item => !item.entreguePara || item.entreguePara === '-' || item.entreguePara.length < 2);
+              }
+              
+              return dayItems;
           }, [deliveries, printDate, onlyPendingPrint]);
 
           const printStats = useMemo(() => {
@@ -408,81 +437,62 @@
 
                 <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 relative scrollbar-hide">
                    
-                   {/* Layout de Impressão */}
+                   {/* Layout de Impressão - PROTOCOLO DE ENTREGA */}
                    <div id="print-section" className="hidden">
-                       <div className="mb-6 pb-4 border-b-2 border-black flex justify-between items-end">
-                           <div className="flex items-center gap-6">
-                               <img src="https://i.postimg.cc/MZyMHZbD/as-02-(1).png" alt="Logo" className="h-16 w-auto grayscale" />
+                       <div className="mb-4 pb-2 border-b-2 border-black flex justify-between items-center">
+                           <div className="flex items-center gap-4">
+                               <img src="https://i.postimg.cc/MZyMHZbD/as-02-(1).png" alt="Logo" className="h-12 w-auto grayscale" />
                                <div>
-                                   <h1 className="text-3xl font-bold uppercase tracking-tight">Relatório de Logística</h1>
-                                   <p className="text-sm mt-1 text-gray-600">Referência: <strong>{printDate.split('-').reverse().join('/')}</strong></p>
+                                   <h1 className="text-2xl font-bold uppercase tracking-tight">Protocolo de Entrega</h1>
+                                   <p className="text-xs mt-0.5 text-black">Data de Referência: <strong>{printDate.split('-').reverse().join('/')}</strong></p>
                                </div>
                            </div>
                            <div className="text-right">
-                               <div className="text-xs font-bold uppercase border border-black px-2 py-1 inline-block mb-1">{viewYear}</div>
-                               <p className="text-xs uppercase font-medium">{onlyPendingPrint ? "Lista de Pendências" : "Relatório Geral"}</p>
+                               <div className="text-[10px] font-bold uppercase border border-black px-2 py-0.5 inline-block mb-1">{viewYear}</div>
+                               <p className="text-[10px] uppercase font-bold">{onlyPendingPrint ? "Lista de Pendências (Assinatura)" : "Relatório Geral Completo"}</p>
                            </div>
                        </div>
                        
-                       {printStats && (
-                           <div className="flex gap-4 mb-6 border border-black p-3 text-xs bg-gray-50">
-                               <div className="flex-1 border-r border-black pr-4">
-                                   <span className="font-bold uppercase block text-gray-500 mb-1">Setor + Recebimentos</span>
-                                   <div className="flex justify-between items-end">
-                                       <span className="text-base font-bold">{printStats.topSector ? printStats.topSector[0] : '-'}</span>
-                                       <span className="font-mono">({printStats.topSector ? printStats.topSector[1] : 0})</span>
-                                   </div>
-                               </div>
-                               <div className="flex-1 border-r border-black pr-4 pl-2">
-                                   <span className="font-bold uppercase block text-gray-500 mb-1">Transportadora Top</span>
-                                   <div className="flex justify-between items-end">
-                                       <span className="text-base font-bold">{printStats.topCarrier ? printStats.topCarrier[0] : '-'}</span>
-                                       <span className="font-mono">({printStats.topCarrier ? printStats.topCarrier[1] : 0})</span>
-                                   </div>
-                               </div>
-                                <div className="flex-1 pl-2">
-                                   <span className="font-bold uppercase block text-gray-500 mb-1">Total Volumes</span>
-                                   <div className="flex justify-between items-end">
-                                       <span className="text-base font-bold">{printData.length}</span>
-                                       <span className="font-mono">volumes</span>
-                                   </div>
-                               </div>
-                           </div>
-                       )}
-                       
-                       <table className="w-full">
+                       <table className="w-full text-[10px]">
                            <thead>
-                               <tr className="bg-gray-100">
-                                   <th style={{width: '15%'}} className="uppercase text-xs">Data / Transp.</th>
-                                   <th style={{width: '30%'}} className="uppercase text-xs">Remetente / Documento</th>
-                                   <th style={{width: '15%'}} className="uppercase text-xs">Setor Destino</th>
-                                   <th style={{width: '20%'}} className="uppercase text-xs">Recebido Por</th>
-                                   <th style={{width: '20%'}} className="uppercase text-xs">Assinatura</th>
+                               <tr className="bg-gray-200">
+                                   <th style={{width: '10%'}}>Origem</th>
+                                   <th style={{width: '25%'}}>Remetente</th>
+                                   <th style={{width: '15%'}}>Doc/NF</th>
+                                   <th style={{width: '15%'}}>Setor Destino</th>
+                                   <th style={{width: '35%'}}>Assinatura / Recebido Por</th>
                                </tr>
                            </thead>
                            <tbody>
                                {printData.map((d, i) => (
                                    <tr key={i}>
-                                       <td className="align-top">
-                                           <strong>{d.data}</strong>
-                                           <div style={{fontSize: '9px', marginTop: '4px'}}>{d.transportadora}</div>
-                                       </td>
-                                       <td className="align-top">
+                                       <td>{d.transportadora}</td>
+                                       <td>
                                            <strong>{d.remetente}</strong>
-                                           <div style={{fontSize: '9px', fontFamily: 'monospace', marginTop: '2px'}}>{d.doc !== '-' ? d.doc : ''}</div>
-                                           {d.obs && <div style={{fontSize: '9px', fontStyle: 'italic', marginTop: '2px'}}>Obs: {d.obs}</div>}
+                                           {d.obs && <div className="italic text-[9px] mt-1">Obs: {d.obs}</div>}
                                        </td>
-                                       <td className="align-top">{d.setor}</td>
-                                       <td className="align-top">{d.entreguePara}</td>
-                                       <td className="border-b border-black h-8"></td>
+                                       <td>{d.doc !== '-' ? d.doc : ''}</td>
+                                       <td className="font-bold">{d.setor}</td>
+                                       <td className="assinatura-col">
+                                            {/* Se já foi entregue (e estamos imprimindo tudo), mostra o nome. Senão, linha para assinar */}
+                                            {d.entreguePara && d.entreguePara !== '-' && d.entreguePara.length > 1 ? (
+                                                <div className="text-xs">
+                                                    Entregue para: <strong>{d.entreguePara}</strong>
+                                                </div>
+                                            ) : (
+                                                <div className="border-b border-black w-full h-8 mt-2 relative">
+                                                    <span className="absolute bottom-[-12px] right-0 text-[8px] italic">Data: ___/___/___</span>
+                                                </div>
+                                            )}
+                                       </td>
                                    </tr>
                                ))}
-                               {printData.length === 0 && <tr><td colSpan="5" className="text-center py-8 italic text-gray-500">Nenhum registro encontrado para os critérios selecionados.</td></tr>}
+                               {printData.length === 0 && <tr><td colSpan="5" className="text-center py-8 italic">Nenhum item pendente para esta data.</td></tr>}
                            </tbody>
                        </table>
-                       <div className="fixed bottom-0 left-0 w-full mt-8 pt-4 border-t border-black text-[9px] flex justify-between uppercase">
-                           <span>Gerado automaticamente pelo Sistema de Logística</span>
-                           <span>{new Date().toLocaleString('pt-BR')}</span>
+                       <div className="fixed bottom-0 left-0 w-full mt-4 border-t border-black text-[9px] flex justify-between uppercase pt-1">
+                           <span>Controle Logístico Interno</span>
+                           <span>Impresso em: {new Date().toLocaleString('pt-BR')}</span>
                        </div>
                    </div>
 
@@ -555,7 +565,7 @@
                    {activeTab === 'list' && (
                        <div className="space-y-4 animate-in max-w-7xl mx-auto">
                            
-                           {/* CARTÕES DE RESUMO NA TELA PRINCIPAL (NOVO) */}
+                           {/* CARTÕES DE RESUMO NA TELA PRINCIPAL */}
                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-2 no-print">
                                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
                                    <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><Package size={24}/></div>
@@ -596,15 +606,15 @@
                                        <input type="date" value={printDate} onChange={e => setPrintDate(e.target.value)} className="bg-transparent border-none text-xs font-bold text-slate-700 focus:ring-0 p-0 outline-none cursor-pointer" />
                                    </div>
                                    <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
-                                   <button onClick={() => window.print()} className="flex items-center gap-2 text-slate-600 hover:text-blue-600 px-2 py-1.5 rounded-lg text-xs font-bold transition-colors">
-                                       <Printer size={16} /> <span className="hidden sm:inline">Imprimir Relatório</span>
+                                   <button onClick={() => window.print()} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/20">
+                                       <Printer size={16} /> <span className="hidden sm:inline">Imprimir Protocolo</span>
                                    </button>
                                </div>
                                
                                <div className="flex items-center gap-4">
                                    <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer select-none bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors">
                                        <input type="checkbox" checked={onlyPendingPrint} onChange={e => setOnlyPendingPrint(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500 border-slate-300 w-4 h-4" />
-                                       Apenas Pendentes
+                                       Imprimir Apenas Pendentes (Assinatura)
                                    </label>
                                    <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">Lista: {filteredDeliveries.length}</span>
                                </div>
@@ -620,7 +630,7 @@
                                                <th className="px-6 py-4">Remetente / Docs</th>
                                                <th className="px-6 py-4">Status Logístico</th>
                                                <th className="px-6 py-4">Setor</th>
-                                               <th className="px-6 py-4 w-10"></th>
+                                               <th className="px-6 py-4 w-24 text-right">Ações</th>
                                            </tr>
                                        </thead>
                                        <tbody className="divide-y divide-slate-50">
@@ -681,9 +691,14 @@
                                                    </td>
                                                    <td className="px-6 py-5 text-right">
                                                        {viewYear === currentYear && (
-                                                           <button onClick={() => handleOpenEdit(item)} className="p-2 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all transform hover:scale-110">
-                                                               <Edit3 size={16} />
-                                                           </button>
+                                                           <div className="flex gap-1 justify-end">
+                                                               <button onClick={() => handleOpenEdit(item)} title="Editar" className="p-2 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all transform hover:scale-110">
+                                                                   <Edit3 size={16} />
+                                                               </button>
+                                                               <button onClick={() => handleDelete(item.id)} title="Excluir (Requer Senha)" className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all transform hover:scale-110">
+                                                                   <Trash2 size={16} />
+                                                               </button>
+                                                           </div>
                                                        )}
                                                    </td>
                                                </tr>
@@ -709,7 +724,7 @@
                 </div>
               </main>
 
-              {/* MODAL NOVA ENTREGA - Redesenhado */}
+              {/* MODAL NOVA ENTREGA */}
               {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in">
                   <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] ring-1 ring-white/10">
@@ -783,7 +798,7 @@
                                   </div>
                                   <div className="space-y-1.5">
                                       <label className="text-[10px] font-bold text-slate-400">Recebido Por</label>
-                                      <input type="text" placeholder="Nome do Funcionário" className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-emerald-500 outline-none transition-all" value={newDeliveryForm.entreguePara} onChange={e => setNewDeliveryForm({...newDeliveryForm, entreguePara: e.target.value})} />
+                                      <input type="text" placeholder="Nome do Funcionário (Confirma a entrega)" className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-emerald-500 outline-none transition-all" value={newDeliveryForm.entreguePara} onChange={e => setNewDeliveryForm({...newDeliveryForm, entreguePara: e.target.value})} />
                                   </div>
                                   <div className="space-y-1.5">
                                       <label className="text-[10px] font-bold text-slate-400">Entregue Por (Logística)</label>
