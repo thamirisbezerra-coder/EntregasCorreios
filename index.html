@@ -28,41 +28,46 @@
         .season-btn:hover { background-color: rgba(255,255,255,0.05); }
         .season-btn.active { background-color: rgba(255,255,255,0.1); border-left-color: #60a5fa; color: white; font-weight: 600; }
 
-        /* Estilo de Impressão Otimizado - Protocolo Paginado */
+        /* --- ESTILO DE IMPRESSÃO RETRATO (A4) --- */
         @media print {
+            @page { 
+                size: A4 portrait; /* Força Retrato */
+                margin: 10mm;      /* Margem segura */
+            }
+            
             body * { visibility: hidden; }
             #print-section, #print-section * { visibility: visible; }
             #print-section { 
-                display: block !important; 
                 position: absolute; left: 0; top: 0; width: 100%; 
                 background: white !important; padding: 0; margin: 0; color: black !important; 
             }
-            @page { margin: 0.5cm; size: landscape; }
             .no-print { display: none !important; }
             
-            /* Configuração da Página de Impressão */
+            /* Container da Página A4 */
             .print-page {
-                width: 100vw;
-                height: 100vh;
-                page-break-after: always; /* Força nova página após cada bloco */
+                width: 100%;
+                /* Altura fixa aproximada da área útil A4 (297mm - 20mm margem = 277mm) */
+                height: 275mm; 
+                page-break-after: always;
                 break-after: page;
                 position: relative;
                 display: flex;
                 flex-direction: column;
-                justify-content: space-between; /* Empurra rodapé para baixo */
-                padding: 20px 40px;
-                box-sizing: border-box;
+                justify-content: space-between;
             }
             .print-page:last-child {
-                page-break-after: auto;
-                break-after: auto;
+                page-break-after: avoid;
+                break-after: avoid;
             }
 
-            /* Tabela de impressão */
-            table { width: 100% !important; border-collapse: collapse !important; border: 1px solid #000; }
-            th, td { border: 1px solid #000 !important; padding: 6px 8px !important; font-size: 11px !important; text-align: left; vertical-align: middle; }
-            th { background-color: #eee !important; font-weight: bold; text-transform: uppercase; }
-            .assinatura-col { height: 50px; vertical-align: bottom !important; } 
+            /* Tabela Ajustada para Retrato */
+            table { width: 100% !important; border-collapse: collapse !important; border: 1px solid #000; table-layout: fixed; }
+            th, td { border: 1px solid #000 !important; padding: 6px 4px !important; font-size: 10px !important; text-align: left; vertical-align: middle; word-wrap: break-word; }
+            th { background-color: #f3f4f6 !important; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+            
+            /* Altura fixa para linhas para garantir uniformidade */
+            tr { height: 45px; } 
+            .assinatura-col { vertical-align: bottom !important; padding-bottom: 2px !important; } 
         }
     </style>
 
@@ -352,7 +357,7 @@
 
           // Lógica de Paginação para Impressão
           const printPages = useMemo(() => {
-              const ITEMS_PER_PAGE = 10;
+              const ITEMS_PER_PAGE = 10; // Mantendo 10 por página, que fica bem confortável em A4 Retrato
               const pages = [];
               for (let i = 0; i < printData.length; i += ITEMS_PER_PAGE) {
                   pages.push(printData.slice(i, i + ITEMS_PER_PAGE));
@@ -498,41 +503,35 @@
 
                 <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 relative scrollbar-hide">
                    
-                   {/* Layout de Impressão - PROTOCOLO DE ENTREGA PAGINADO */}
+                   {/* Layout de Impressão - PROTOCOLO DE ENTREGA PAGINADO (RETRATO) */}
                    <div id="print-section" className="hidden">
                        {printPages.map((pageItems, pageIndex) => (
                            <div key={pageIndex} className="print-page">
                                {/* Cabeçalho da Página */}
-                               <div className="mb-4 pb-2 border-b-2 border-black flex justify-between items-center">
-                                   <div className="flex items-center gap-4">
-                                       <img src="https://i.postimg.cc/MZyMHZbD/as-02-(1).png" alt="Logo" className="h-12 w-auto grayscale" />
-                                       <div>
-                                           <h1 className="text-2xl font-bold uppercase tracking-tight">Protocolo de Entrega</h1>
-                                           <p className="text-xs mt-0.5 text-black">
+                               <div className="flex flex-col gap-4 mb-4">
+                                   <div className="flex justify-between items-center border-b pb-2 border-black">
+                                       <img src="https://i.postimg.cc/MZyMHZbD/as-02-(1).png" alt="Logo" className="h-14 w-auto grayscale" />
+                                       <div className="text-right">
+                                           <h1 className="text-xl font-bold uppercase tracking-tight">Protocolo de Entrega</h1>
+                                           <p className="text-[10px] mt-1 text-gray-600">
                                                {isSelectionMode && selectedIds.size > 0 
                                                    ? <span>Itens Selecionados: <strong>{selectedIds.size} volumes</strong></span> 
-                                                   : <span>Data de Referência: <strong>{printDate.split('-').reverse().join('/')}</strong></span>
+                                                   : <span>Data Ref: <strong>{printDate.split('-').reverse().join('/')}</strong></span>
                                                }
                                            </p>
                                        </div>
-                                   </div>
-                                   <div className="text-right">
-                                       <div className="text-[10px] font-bold uppercase border border-black px-2 py-0.5 inline-block mb-1">{viewYear}</div>
-                                       <p className="text-[10px] uppercase font-bold">
-                                           {isSelectionMode && selectedIds.size > 0 ? "Impressão Personalizada" : (onlyPendingPrint ? "Itens Sem Observação (Pendentes)" : "Relatório Geral")}
-                                       </p>
                                    </div>
                                </div>
                                
                                {/* Corpo da Tabela */}
                                <div className="flex-1">
-                                   <table className="w-full text-[10px]">
+                                   <table className="w-full">
                                        <thead>
-                                           <tr className="bg-gray-200">
-                                               <th style={{width: '10%'}}>Data/Origem</th>
-                                               <th style={{width: '25%'}}>Remetente</th>
+                                           <tr>
+                                               <th style={{width: '12%'}}>Data/Origem</th>
+                                               <th style={{width: '28%'}}>Remetente</th>
                                                <th style={{width: '15%'}}>Doc/NF</th>
-                                               <th style={{width: '15%'}}>Setor Destino</th>
+                                               <th style={{width: '10%'}}>Setor</th>
                                                <th style={{width: '35%'}}>Assinatura / Recebido Por</th>
                                            </tr>
                                        </thead>
@@ -558,7 +557,7 @@
                                                             <div className="w-full h-full flex flex-col justify-end pb-1">
                                                                 <div className="border-b border-black w-full mb-2"></div>
                                                                 <div className="flex justify-between items-end w-full px-1">
-                                                                    <span className="text-[9px]">Setor: __________________</span>
+                                                                    <span className="text-[9px]">Setor: ________________</span>
                                                                     <span className="text-[8px] italic">Data: ___/___</span>
                                                                 </div>
                                                             </div>
@@ -955,6 +954,7 @@
     </script>
 </body>
 </html>
+
 
 
 
