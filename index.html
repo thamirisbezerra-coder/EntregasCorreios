@@ -28,14 +28,14 @@
         .season-btn:hover { background-color: rgba(255,255,255,0.05); }
         .season-btn.active { background-color: rgba(255,255,255,0.1); border-left-color: #60a5fa; color: white; font-weight: 600; }
 
-        /* --- ESTILO DE IMPRESSÃO RETRATO (A4) DEFINITIVO --- */
+        /* --- ESTILO DE IMPRESSÃO RETRATO (A4) --- */
         @media print {
             @page { 
                 size: A4 portrait; 
-                margin: 5mm; /* Margem menor para aproveitar melhor o papel */
+                margin: 5mm; 
             }
             
-            /* CORREÇÃO CRÍTICA: Destravar altura e rolagem do corpo para impressão */
+            /* Destravar altura e rolagem do corpo para impressão */
             html, body, #root, main {
                 height: auto !important;
                 overflow: visible !important;
@@ -45,7 +45,7 @@
             /* Esconde tudo que não é de impressão */
             body * { visibility: hidden; }
             
-            /* Mostra e posiciona o container de impressão */
+            /* Mostra o container de impressão */
             #print-section, #print-section * { 
                 visibility: visible; 
             }
@@ -62,27 +62,16 @@
             
             .no-print { display: none !important; }
             
-            /* Container da Página A4 */
+            /* Container da Página A4 Única */
             .print-page {
                 width: 100%;
-                /* Altura A4 (297mm) - Margens. Usando 280mm para garantir quebra */
-                height: 285mm; 
-                page-break-after: always;
-                break-after: page;
+                height: 285mm; /* Altura A4 segura */
                 position: relative;
                 display: flex;
                 flex-direction: column;
-                justify-content: flex-start; /* Conteúdo no topo */
+                justify-content: flex-start;
                 padding: 10mm;
                 box-sizing: border-box;
-            }
-            
-            /* Evita página em branco extra no final */
-            .print-page:last-child {
-                page-break-after: avoid;
-                break-after: avoid;
-                height: auto; /* Última página ajusta ao conteúdo se for pequena */
-                min-height: 280mm; /* Mas mantém tamanho se for preciso para rodapé */
             }
 
             /* Tabela Ajustada */
@@ -90,13 +79,13 @@
             th, td { border: 1px solid #000 !important; padding: 4px 6px !important; font-size: 11px !important; text-align: left; vertical-align: middle; word-wrap: break-word; }
             th { background-color: #f3f4f6 !important; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; height: 30px; }
             
-            /* Altura fixa para linhas para caberem 10-12 na página */
-            tr { height: 55px; } /* Aumentei um pouco para melhor assinatura */
+            /* Altura fixa para linhas para garantir que 10 caibam perfeito */
+            tr { height: 55px; } 
             .assinatura-col { vertical-align: bottom !important; padding-bottom: 4px !important; } 
             
-            /* Rodapé fixo no final da div da página */
+            /* Rodapé fixo */
             .page-footer {
-                margin-top: auto; /* Empurra para o final do flex container */
+                margin-top: auto; 
                 padding-top: 10px;
                 border-top: 1px solid #000;
             }
@@ -216,6 +205,7 @@
           // Estado para seleção manual de impressão
           const [isSelectionMode, setIsSelectionMode] = useState(false);
           const [selectedIds, setSelectedIds] = useState(new Set());
+          const MAX_SELECTION = 10;
 
           const [newDeliveryForm, setNewDeliveryForm] = useState({
             data: '', remetente: '', transportadora: '', doc: '', entreguePara: '', quemEntregou: '', setor: '', obs: ''
@@ -321,25 +311,37 @@
               setImportForm({...importForm, textData: ''});
           };
 
-          // Lógica de Seleção
+          // Lógica de Seleção com Limite de 10
           const toggleSelection = (id) => {
               const newSet = new Set(selectedIds);
               if (newSet.has(id)) {
                   newSet.delete(id);
               } else {
+                  if (newSet.size >= MAX_SELECTION) {
+                      alert(`Você só pode selecionar até ${MAX_SELECTION} itens para garantir o ajuste na folha de impressão.`);
+                      return;
+                  }
                   newSet.add(id);
               }
               setSelectedIds(newSet);
           };
 
           const toggleSelectAll = (items) => {
-              if (selectedIds.size === items.length && items.length > 0) {
+              if (selectedIds.size > 0) {
                   setSelectedIds(new Set()); // Desmarcar tudo
               } else {
-                  // Marcar tudo o que está visível
+                  // Selecionar apenas os primeiros 10
                   const newSet = new Set();
-                  items.forEach(i => newSet.add(i.id));
+                  let count = 0;
+                  for (const item of items) {
+                      if (count >= MAX_SELECTION) break;
+                      newSet.add(item.id);
+                      count++;
+                  }
                   setSelectedIds(newSet);
+                  if (items.length > MAX_SELECTION) {
+                      alert(`Foram selecionados apenas os primeiros ${MAX_SELECTION} itens automaticamente para caber na folha.`);
+                  }
               }
           };
 
@@ -384,17 +386,20 @@
                   return dayItems.filter(item => !item.obs || item.obs.trim() === '');
               }
               
+              // Se passar de 10 no modo automático, avisa ou corta (opcional, mas aqui deixamos tudo para o fallback)
+              // Idealmente o usuário deve usar a seleção manual para garantir.
               return dayItems;
           }, [deliveries, printDate, onlyPendingPrint, selectedIds, isSelectionMode]);
 
-          // Lógica de Paginação para Impressão
+          // Lógica de Paginação para Impressão (Agora garantido 10 itens max por página se selecionado)
           const printPages = useMemo(() => {
-              const ITEMS_PER_PAGE = 10; // 10 itens por página é o ideal para A4 Vertical
               const pages = [];
-              for (let i = 0; i < printData.length; i += ITEMS_PER_PAGE) {
-                  pages.push(printData.slice(i, i + ITEMS_PER_PAGE));
+              // Se for seleção manual, sabemos que tem max 10, então é 1 página só.
+              // Mas mantemos a lógica de chunk caso venha do modo automático com > 10
+              const items = printData; 
+              for (let i = 0; i < items.length; i += 10) {
+                  pages.push(items.slice(i, i + 10));
               }
-              // Se não houver dados, garante pelo menos 1 página vazia
               if (pages.length === 0) return [[]];
               return pages;
           }, [printData]);
@@ -736,7 +741,7 @@
                                                    <th className="px-4 py-4 w-12 text-center animate-in">
                                                        <input type="checkbox" 
                                                            className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
-                                                           checked={filteredDeliveries.length > 0 && selectedIds.size === filteredDeliveries.length}
+                                                           checked={filteredDeliveries.length > 0 && selectedIds.size === Math.min(filteredDeliveries.length, MAX_SELECTION)}
                                                            onChange={() => toggleSelectAll(filteredDeliveries)}
                                                        />
                                                    </th>
