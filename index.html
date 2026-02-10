@@ -28,10 +28,10 @@
         .season-btn:hover { background-color: rgba(255,255,255,0.05); }
         .season-btn.active { background-color: rgba(255,255,255,0.1); border-left-color: #60a5fa; color: white; font-weight: 600; }
 
-        /* --- ESTILO DE IMPRESSÃO RETRATO (A4) --- */
+        /* --- ESTILO DE IMPRESSÃO PAISAGEM (A4 DEITADO) --- */
         @media print {
             @page { 
-                size: A4 portrait; 
+                size: A4 landscape; /* Força formato deitado */
                 margin: 5mm; 
             }
             
@@ -40,12 +40,15 @@
                 height: auto !important;
                 overflow: visible !important;
                 background: white !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
 
-            /* Esconde tudo que não é de impressão */
+            /* Esconde interface do sistema */
             body * { visibility: hidden; }
             
-            /* Mostra o container de impressão */
+            /* Mostra apenas a área de impressão */
             #print-section, #print-section * { 
                 visibility: visible; 
             }
@@ -62,32 +65,60 @@
             
             .no-print { display: none !important; }
             
-            /* Container da Página A4 Única */
+            /* Container da Página A4 Paisagem */
             .print-page {
                 width: 100%;
-                height: 285mm; /* Altura A4 segura */
+                /* Altura aproximada útil A4 Paisagem (210mm) */
+                height: 195mm; 
                 position: relative;
                 display: flex;
                 flex-direction: column;
                 justify-content: flex-start;
                 padding: 10mm;
                 box-sizing: border-box;
+                background: white;
             }
 
-            /* Tabela Ajustada */
-            table { width: 100% !important; border-collapse: collapse !important; border: 1px solid #000; table-layout: fixed; }
-            th, td { border: 1px solid #000 !important; padding: 4px 6px !important; font-size: 11px !important; text-align: left; vertical-align: middle; word-wrap: break-word; }
-            th { background-color: #f3f4f6 !important; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; height: 30px; }
+            /* Tabela Ajustada para Paisagem */
+            table { 
+                width: 100% !important; 
+                border-collapse: collapse !important; 
+                border: 2px solid #000; /* Borda externa mais grossa */
+                table-layout: fixed; 
+            }
             
-            /* Altura fixa para linhas para garantir que 10 caibam perfeito */
-            tr { height: 55px; } 
-            .assinatura-col { vertical-align: bottom !important; padding-bottom: 4px !important; } 
+            th, td { 
+                border: 1px solid #000 !important; 
+                padding: 4px 8px !important; 
+                font-size: 11px !important; 
+                text-align: left; 
+                vertical-align: middle; 
+                word-wrap: break-word; 
+            }
+            
+            th { 
+                background-color: #eee !important; 
+                font-weight: 800; 
+                text-transform: uppercase; 
+                border-bottom: 2px solid #000 !important;
+                height: 35px;
+            }
+            
+            /* Altura fixa para linhas (10 linhas cabem folgadas em paisagem) */
+            tr { height: 50px; } 
+            
+            .assinatura-col { 
+                vertical-align: bottom !important; 
+                padding-bottom: 4px !important; 
+            } 
             
             /* Rodapé fixo */
             .page-footer {
                 margin-top: auto; 
                 padding-top: 10px;
-                border-top: 1px solid #000;
+                border-top: 2px solid #000;
+                font-size: 10px;
+                font-weight: bold;
             }
         }
     </style>
@@ -540,7 +571,7 @@
 
                 <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 relative scrollbar-hide">
                    
-                   {/* Layout de Impressão - PROTOCOLO DE ENTREGA PAGINADO (RETRATO) */}
+                   {/* Layout de Impressão - PROTOCOLO DE ENTREGA PAGINADO (PAISAGEM) */}
                    <div id="print-section" className="hidden">
                        {printPages.map((pageItems, pageIndex) => (
                            <div key={pageIndex} className="print-page">
@@ -565,8 +596,8 @@
                                    <table className="w-full">
                                        <thead>
                                            <tr>
-                                               <th style={{width: '12%'}}>Data/Origem</th>
-                                               <th style={{width: '28%'}}>Remetente</th>
+                                               <th style={{width: '10%'}}>Data/Origem</th>
+                                               <th style={{width: '30%'}}>Remetente</th>
                                                <th style={{width: '15%'}}>Doc/NF</th>
                                                <th style={{width: '10%'}}>Setor</th>
                                                <th style={{width: '35%'}}>Assinatura / Recebido Por</th>
@@ -609,7 +640,7 @@
                                </div>
 
                                {/* Rodapé da Página */}
-                               <div className="page-footer text-[9px] flex justify-between uppercase">
+                               <div className="page-footer flex justify-between uppercase">
                                    <span>Controle Logístico Interno</span>
                                    <span>Página {pageIndex + 1} de {printPages.length}</span>
                                    <span>Impresso em: {new Date().toLocaleString('pt-BR')}</span>
@@ -991,7 +1022,6 @@
     </script>
 </body>
 </html>
-
 
 
 
