@@ -28,21 +28,36 @@
         .season-btn:hover { background-color: rgba(255,255,255,0.05); }
         .season-btn.active { background-color: rgba(255,255,255,0.1); border-left-color: #60a5fa; color: white; font-weight: 600; }
 
-        /* --- ESTILO DE IMPRESSÃO RETRATO (A4) CORRIGIDO --- */
+        /* --- ESTILO DE IMPRESSÃO RETRATO (A4) DEFINITIVO --- */
         @media print {
             @page { 
                 size: A4 portrait; 
-                margin: 10mm;
+                margin: 5mm; /* Margem menor para aproveitar melhor o papel */
             }
             
+            /* CORREÇÃO CRÍTICA: Destravar altura e rolagem do corpo para impressão */
+            html, body, #root, main {
+                height: auto !important;
+                overflow: visible !important;
+                background: white !important;
+            }
+
+            /* Esconde tudo que não é de impressão */
             body * { visibility: hidden; }
-            #print-section, #print-section * { visibility: visible; }
+            
+            /* Mostra e posiciona o container de impressão */
+            #print-section, #print-section * { 
+                visibility: visible; 
+            }
             
             #print-section { 
-                /* A CORREÇÃO ESTÁ AQUI: display block obriga a mostrar o que estava hidden */
                 display: block !important; 
-                position: absolute; left: 0; top: 0; width: 100%; 
-                background: white !important; padding: 0; margin: 0; color: black !important; 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 100%; 
+                margin: 0; 
+                padding: 0;
             }
             
             .no-print { display: none !important; }
@@ -50,28 +65,41 @@
             /* Container da Página A4 */
             .print-page {
                 width: 100%;
-                /* Ajustei levemente para 270mm para garantir margem de segurança */
-                height: 270mm; 
+                /* Altura A4 (297mm) - Margens. Usando 280mm para garantir quebra */
+                height: 285mm; 
                 page-break-after: always;
                 break-after: page;
                 position: relative;
                 display: flex;
                 flex-direction: column;
-                justify-content: space-between;
+                justify-content: flex-start; /* Conteúdo no topo */
+                padding: 10mm;
+                box-sizing: border-box;
             }
+            
+            /* Evita página em branco extra no final */
             .print-page:last-child {
                 page-break-after: avoid;
                 break-after: avoid;
+                height: auto; /* Última página ajusta ao conteúdo se for pequena */
+                min-height: 280mm; /* Mas mantém tamanho se for preciso para rodapé */
             }
 
-            /* Tabela Ajustada para Retrato */
+            /* Tabela Ajustada */
             table { width: 100% !important; border-collapse: collapse !important; border: 1px solid #000; table-layout: fixed; }
-            th, td { border: 1px solid #000 !important; padding: 6px 4px !important; font-size: 10px !important; text-align: left; vertical-align: middle; word-wrap: break-word; }
-            th { background-color: #f3f4f6 !important; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+            th, td { border: 1px solid #000 !important; padding: 4px 6px !important; font-size: 11px !important; text-align: left; vertical-align: middle; word-wrap: break-word; }
+            th { background-color: #f3f4f6 !important; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; height: 30px; }
             
-            /* Altura fixa para linhas */
-            tr { height: 45px; } 
-            .assinatura-col { vertical-align: bottom !important; padding-bottom: 2px !important; } 
+            /* Altura fixa para linhas para caberem 10-12 na página */
+            tr { height: 55px; } /* Aumentei um pouco para melhor assinatura */
+            .assinatura-col { vertical-align: bottom !important; padding-bottom: 4px !important; } 
+            
+            /* Rodapé fixo no final da div da página */
+            .page-footer {
+                margin-top: auto; /* Empurra para o final do flex container */
+                padding-top: 10px;
+                border-top: 1px solid #000;
+            }
         }
     </style>
 
@@ -361,7 +389,7 @@
 
           // Lógica de Paginação para Impressão
           const printPages = useMemo(() => {
-              const ITEMS_PER_PAGE = 10; // Mantendo 10 por página, que fica bem confortável em A4 Retrato
+              const ITEMS_PER_PAGE = 10; // 10 itens por página é o ideal para A4 Vertical
               const pages = [];
               for (let i = 0; i < printData.length; i += ITEMS_PER_PAGE) {
                   pages.push(printData.slice(i, i + ITEMS_PER_PAGE));
@@ -576,7 +604,7 @@
                                </div>
 
                                {/* Rodapé da Página */}
-                               <div className="border-t border-black text-[9px] flex justify-between uppercase pt-1 mt-4">
+                               <div className="page-footer text-[9px] flex justify-between uppercase">
                                    <span>Controle Logístico Interno</span>
                                    <span>Página {pageIndex + 1} de {printPages.length}</span>
                                    <span>Impresso em: {new Date().toLocaleString('pt-BR')}</span>
@@ -958,7 +986,6 @@
     </script>
 </body>
 </html>
-
 
 
 
