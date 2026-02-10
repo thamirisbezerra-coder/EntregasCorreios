@@ -28,7 +28,7 @@
         .season-btn:hover { background-color: rgba(255,255,255,0.05); }
         .season-btn.active { background-color: rgba(255,255,255,0.1); border-left-color: #60a5fa; color: white; font-weight: 600; }
 
-        /* Estilo de Impressão Otimizado - Protocolo */
+        /* Estilo de Impressão Otimizado - Protocolo Paginado */
         @media print {
             body * { visibility: hidden; }
             #print-section, #print-section * { visibility: visible; }
@@ -37,14 +37,32 @@
                 position: absolute; left: 0; top: 0; width: 100%; 
                 background: white !important; padding: 0; margin: 0; color: black !important; 
             }
-            @page { margin: 1cm; size: landscape; }
+            @page { margin: 0.5cm; size: landscape; }
             .no-print { display: none !important; }
             
-            /* Tabela de impressão mais espaçada para assinatura */
+            /* Configuração da Página de Impressão */
+            .print-page {
+                width: 100vw;
+                height: 100vh;
+                page-break-after: always; /* Força nova página após cada bloco */
+                break-after: page;
+                position: relative;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between; /* Empurra rodapé para baixo */
+                padding: 20px 40px;
+                box-sizing: border-box;
+            }
+            .print-page:last-child {
+                page-break-after: auto;
+                break-after: auto;
+            }
+
+            /* Tabela de impressão */
             table { width: 100% !important; border-collapse: collapse !important; border: 1px solid #000; }
-            th, td { border: 1px solid #000 !important; padding: 8px 8px !important; font-size: 11px !important; text-align: left; vertical-align: middle; }
+            th, td { border: 1px solid #000 !important; padding: 6px 8px !important; font-size: 11px !important; text-align: left; vertical-align: middle; }
             th { background-color: #eee !important; font-weight: bold; text-transform: uppercase; }
-            .assinatura-col { height: 60px; vertical-align: bottom !important; } /* Espaço maior para assinar */
+            .assinatura-col { height: 50px; vertical-align: bottom !important; } 
         }
     </style>
 
@@ -332,6 +350,18 @@
               return dayItems;
           }, [deliveries, printDate, onlyPendingPrint, selectedIds, isSelectionMode]);
 
+          // Lógica de Paginação para Impressão
+          const printPages = useMemo(() => {
+              const ITEMS_PER_PAGE = 10;
+              const pages = [];
+              for (let i = 0; i < printData.length; i += ITEMS_PER_PAGE) {
+                  pages.push(printData.slice(i, i + ITEMS_PER_PAGE));
+              }
+              // Se não houver dados, garante pelo menos 1 página vazia
+              if (pages.length === 0) return [[]];
+              return pages;
+          }, [printData]);
+
           const stats = useMemo(() => {
             const dataYear = deliveries.filter(d => parseDateYear(d.data) === viewYear);
             const total = dataYear.length;
@@ -468,77 +498,88 @@
 
                 <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 relative scrollbar-hide">
                    
-                   {/* Layout de Impressão - PROTOCOLO DE ENTREGA */}
+                   {/* Layout de Impressão - PROTOCOLO DE ENTREGA PAGINADO */}
                    <div id="print-section" className="hidden">
-                       <div className="mb-4 pb-2 border-b-2 border-black flex justify-between items-center">
-                           <div className="flex items-center gap-4">
-                               <img src="https://i.postimg.cc/MZyMHZbD/as-02-(1).png" alt="Logo" className="h-12 w-auto grayscale" />
-                               <div>
-                                   <h1 className="text-2xl font-bold uppercase tracking-tight">Protocolo de Entrega</h1>
-                                   <p className="text-xs mt-0.5 text-black">
-                                       {isSelectionMode && selectedIds.size > 0 
-                                           ? <span>Itens Selecionados: <strong>{selectedIds.size} volumes</strong></span> 
-                                           : <span>Data de Referência: <strong>{printDate.split('-').reverse().join('/')}</strong></span>
-                                       }
-                                   </p>
+                       {printPages.map((pageItems, pageIndex) => (
+                           <div key={pageIndex} className="print-page">
+                               {/* Cabeçalho da Página */}
+                               <div className="mb-4 pb-2 border-b-2 border-black flex justify-between items-center">
+                                   <div className="flex items-center gap-4">
+                                       <img src="https://i.postimg.cc/MZyMHZbD/as-02-(1).png" alt="Logo" className="h-12 w-auto grayscale" />
+                                       <div>
+                                           <h1 className="text-2xl font-bold uppercase tracking-tight">Protocolo de Entrega</h1>
+                                           <p className="text-xs mt-0.5 text-black">
+                                               {isSelectionMode && selectedIds.size > 0 
+                                                   ? <span>Itens Selecionados: <strong>{selectedIds.size} volumes</strong></span> 
+                                                   : <span>Data de Referência: <strong>{printDate.split('-').reverse().join('/')}</strong></span>
+                                               }
+                                           </p>
+                                       </div>
+                                   </div>
+                                   <div className="text-right">
+                                       <div className="text-[10px] font-bold uppercase border border-black px-2 py-0.5 inline-block mb-1">{viewYear}</div>
+                                       <p className="text-[10px] uppercase font-bold">
+                                           {isSelectionMode && selectedIds.size > 0 ? "Impressão Personalizada" : (onlyPendingPrint ? "Itens Sem Observação (Pendentes)" : "Relatório Geral")}
+                                       </p>
+                                   </div>
+                               </div>
+                               
+                               {/* Corpo da Tabela */}
+                               <div className="flex-1">
+                                   <table className="w-full text-[10px]">
+                                       <thead>
+                                           <tr className="bg-gray-200">
+                                               <th style={{width: '10%'}}>Data/Origem</th>
+                                               <th style={{width: '25%'}}>Remetente</th>
+                                               <th style={{width: '15%'}}>Doc/NF</th>
+                                               <th style={{width: '15%'}}>Setor Destino</th>
+                                               <th style={{width: '35%'}}>Assinatura / Recebido Por</th>
+                                           </tr>
+                                       </thead>
+                                       <tbody>
+                                           {pageItems.length > 0 ? pageItems.map((d, i) => (
+                                               <tr key={i}>
+                                                   <td>
+                                                       <strong>{d.data}</strong><br/>
+                                                       {d.transportadora}
+                                                   </td>
+                                                   <td>
+                                                       <strong>{d.remetente}</strong>
+                                                       {d.obs && <div className="italic text-[9px] mt-1">Obs: {d.obs}</div>}
+                                                   </td>
+                                                   <td>{d.doc !== '-' ? d.doc : ''}</td>
+                                                   <td className="font-bold">{d.setor}</td>
+                                                   <td className="assinatura-col relative">
+                                                        {d.entreguePara && d.entreguePara !== '-' && d.entreguePara.length > 1 ? (
+                                                            <div className="text-xs">
+                                                                Entregue para: <strong>{d.entreguePara}</strong>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="w-full h-full flex flex-col justify-end pb-1">
+                                                                <div className="border-b border-black w-full mb-2"></div>
+                                                                <div className="flex justify-between items-end w-full px-1">
+                                                                    <span className="text-[9px]">Setor: __________________</span>
+                                                                    <span className="text-[8px] italic">Data: ___/___</span>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                   </td>
+                                               </tr>
+                                           )) : (
+                                               <tr><td colSpan="5" className="text-center py-8 italic">Nenhum item selecionado para impressão.</td></tr>
+                                           )}
+                                       </tbody>
+                                   </table>
+                               </div>
+
+                               {/* Rodapé da Página */}
+                               <div className="border-t border-black text-[9px] flex justify-between uppercase pt-1 mt-4">
+                                   <span>Controle Logístico Interno</span>
+                                   <span>Página {pageIndex + 1} de {printPages.length}</span>
+                                   <span>Impresso em: {new Date().toLocaleString('pt-BR')}</span>
                                </div>
                            </div>
-                           <div className="text-right">
-                               <div className="text-[10px] font-bold uppercase border border-black px-2 py-0.5 inline-block mb-1">{viewYear}</div>
-                               <p className="text-[10px] uppercase font-bold">
-                                   {isSelectionMode && selectedIds.size > 0 ? "Impressão Personalizada" : (onlyPendingPrint ? "Itens Sem Observação (Pendentes)" : "Relatório Geral")}
-                               </p>
-                           </div>
-                       </div>
-                       
-                       <table className="w-full text-[10px]">
-                           <thead>
-                               <tr className="bg-gray-200">
-                                   <th style={{width: '10%'}}>Data/Origem</th>
-                                   <th style={{width: '25%'}}>Remetente</th>
-                                   <th style={{width: '15%'}}>Doc/NF</th>
-                                   <th style={{width: '15%'}}>Setor Destino</th>
-                                   <th style={{width: '35%'}}>Assinatura / Recebido Por</th>
-                               </tr>
-                           </thead>
-                           <tbody>
-                               {printData.map((d, i) => (
-                                   <tr key={i}>
-                                       <td>
-                                           <strong>{d.data}</strong><br/>
-                                           {d.transportadora}
-                                       </td>
-                                       <td>
-                                           <strong>{d.remetente}</strong>
-                                           {d.obs && <div className="italic text-[9px] mt-1">Obs: {d.obs}</div>}
-                                       </td>
-                                       <td>{d.doc !== '-' ? d.doc : ''}</td>
-                                       <td className="font-bold">{d.setor}</td>
-                                       <td className="assinatura-col relative">
-                                            {/* Se já foi entregue (obs preenchida), mostra o nome/obs. Senão, linha para assinar e preencher setor */}
-                                            {d.entreguePara && d.entreguePara !== '-' && d.entreguePara.length > 1 ? (
-                                                <div className="text-xs">
-                                                    Entregue para: <strong>{d.entreguePara}</strong>
-                                                </div>
-                                            ) : (
-                                                <div className="w-full h-full flex flex-col justify-end pb-1">
-                                                    <div className="border-b border-black w-full mb-2"></div>
-                                                    <div className="flex justify-between items-end w-full px-1">
-                                                        <span className="text-[9px]">Setor: __________________</span>
-                                                        <span className="text-[8px] italic">Data: ___/___</span>
-                                                    </div>
-                                                </div>
-                                            )}
-                                       </td>
-                                   </tr>
-                               ))}
-                               {printData.length === 0 && <tr><td colSpan="5" className="text-center py-8 italic">Nenhum item selecionado para impressão.</td></tr>}
-                           </tbody>
-                       </table>
-                       <div className="fixed bottom-0 left-0 w-full mt-4 border-t border-black text-[9px] flex justify-between uppercase pt-1">
-                           <span>Controle Logístico Interno</span>
-                           <span>Impresso em: {new Date().toLocaleString('pt-BR')}</span>
-                       </div>
+                       ))}
                    </div>
 
                    {/* Dashboard Tab */}
