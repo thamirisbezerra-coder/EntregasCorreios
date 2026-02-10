@@ -28,26 +28,30 @@
         .season-btn:hover { background-color: rgba(255,255,255,0.05); }
         .season-btn.active { background-color: rgba(255,255,255,0.1); border-left-color: #60a5fa; color: white; font-weight: 600; }
 
-        /* --- ESTILO DE IMPRESSÃO RETRATO (A4) --- */
+        /* --- ESTILO DE IMPRESSÃO RETRATO (A4) CORRIGIDO --- */
         @media print {
             @page { 
-                size: A4 portrait; /* Força Retrato */
-                margin: 10mm;      /* Margem segura */
+                size: A4 portrait; 
+                margin: 10mm;
             }
             
             body * { visibility: hidden; }
             #print-section, #print-section * { visibility: visible; }
+            
             #print-section { 
+                /* A CORREÇÃO ESTÁ AQUI: display block obriga a mostrar o que estava hidden */
+                display: block !important; 
                 position: absolute; left: 0; top: 0; width: 100%; 
                 background: white !important; padding: 0; margin: 0; color: black !important; 
             }
+            
             .no-print { display: none !important; }
             
             /* Container da Página A4 */
             .print-page {
                 width: 100%;
-                /* Altura fixa aproximada da área útil A4 (297mm - 20mm margem = 277mm) */
-                height: 275mm; 
+                /* Ajustei levemente para 270mm para garantir margem de segurança */
+                height: 270mm; 
                 page-break-after: always;
                 break-after: page;
                 position: relative;
@@ -65,7 +69,7 @@
             th, td { border: 1px solid #000 !important; padding: 6px 4px !important; font-size: 10px !important; text-align: left; vertical-align: middle; word-wrap: break-word; }
             th { background-color: #f3f4f6 !important; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
             
-            /* Altura fixa para linhas para garantir uniformidade */
+            /* Altura fixa para linhas */
             tr { height: 45px; } 
             .assinatura-col { vertical-align: bottom !important; padding-bottom: 2px !important; } 
         }
