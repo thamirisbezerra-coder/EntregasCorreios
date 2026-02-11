@@ -28,58 +28,66 @@
         .season-btn:hover { background-color: rgba(255,255,255,0.05); }
         .season-btn.active { background-color: rgba(255,255,255,0.1); border-left-color: #60a5fa; color: white; font-weight: 600; }
 
-        /* --- ESTILO DE IMPRESSÃO PAISAGEM (A4 DEITADO) --- */
+        /* --- ESTILO DE IMPRESSÃO PAISAGEM (A4 DEITADO) - CORRIGIDO V15 --- */
         @media print {
             @page { 
                 size: A4 landscape;
-                margin: 5mm; 
+                margin: 0mm; /* Controle total da margem via CSS */
             }
             
-            html, body, #root, main {
-                height: auto !important;
-                overflow: visible !important;
-                background: white !important;
-                width: 100% !important;
+            /* Reset Global para Impressão */
+            html, body {
+                width: 100%;
+                height: 100%;
                 margin: 0 !important;
                 padding: 0 !important;
+                background: white;
+                overflow: visible !important;
             }
 
-            body * { visibility: hidden; }
+            /* Esconde explicitamente tudo que não é o relatório */
+            body * { 
+                visibility: hidden; 
+            }
             
+            #root, main, aside, header, .no-print {
+                display: none !important; 
+            }
+            
+            /* Traz o relatório para frente e o posiciona no topo */
             #print-section, #print-section * { 
                 visibility: visible; 
             }
             
             #print-section { 
                 display: block !important; 
-                position: absolute; 
+                position: absolute; /* Essencial para sobrepor o layout */
                 left: 0; 
                 top: 0; 
                 width: 100%; 
                 margin: 0; 
                 padding: 0;
+                background: white;
+                z-index: 9999; /* Garante que fique por cima de tudo */
             }
             
-            .no-print { display: none !important; }
-            
-            /* Página Fixa */
+            /* Container da Página A4 Paisagem */
             .print-page {
-                width: 100%;
-                height: 195mm; /* Altura segura A4 Paisagem */
+                width: 297mm; /* Largura A4 Paisagem */
+                height: 209mm; /* Altura A4 Paisagem */
                 page-break-after: always;
                 break-after: page;
                 position: relative;
                 display: flex;
                 flex-direction: column;
-                justify-content: flex-start;
-                padding: 5mm 10mm; /* Ajuste de padding */
+                padding: 10mm; /* Margem interna */
                 box-sizing: border-box;
                 background: white;
             }
             
             .print-page:last-child {
-                page-break-after: avoid;
-                break-after: avoid;
+                page-break-after: auto;
+                break-after: auto;
             }
 
             /* Tabela Fixa */
@@ -97,7 +105,6 @@
                 text-align: left; 
                 vertical-align: middle; 
                 word-wrap: break-word; 
-                white-space: normal;
             }
             
             th { 
@@ -106,10 +113,13 @@
                 text-transform: uppercase; 
                 border-bottom: 2px solid #000 !important;
                 height: 30px;
+                color: black !important;
+                -webkit-print-color-adjust: exact;
             }
             
-            /* Linhas com altura EXATA para caber 10 */
+            /* Altura fixa para linhas */
             tr.data-row { height: 13.5mm; } 
+            tr.data-row td { height: 13.5mm; } 
             
             .assinatura-col { 
                 vertical-align: bottom !important; 
@@ -123,6 +133,9 @@
                 border-top: 2px solid #000;
                 font-size: 10px;
                 font-weight: bold;
+                display: flex;
+                justify-content: space-between;
+                width: 100%;
             }
         }
     </style>
@@ -345,7 +358,7 @@
               setImportForm({...importForm, textData: ''});
           };
 
-          // Lógica de Seleção (Sem limites agora, pois o layout se ajusta)
+          // Lógica de Seleção
           const toggleSelection = (id) => {
               const newSet = new Set(selectedIds);
               if (newSet.has(id)) {
@@ -409,23 +422,23 @@
               return dayItems;
           }, [deliveries, printDate, onlyPendingPrint, selectedIds, isSelectionMode]);
 
-          // Lógica de Paginação com preenchimento de linhas vazias (Grade Fixa)
+          // Lógica de Paginação com preenchimento ROBUSTO (Garante 10 linhas sempre)
           const printPages = useMemo(() => {
               const ITEMS_PER_PAGE = 10;
               const pages = [];
-              const items = [...printData]; // Cópia para não mutar
+              const items = [...printData];
               
-              // Se não tiver itens, gera 1 página com 10 linhas vazias
+              // Se não tiver itens, gera 1 página com 10 "items vazios"
               if (items.length === 0) {
-                  pages.push(new Array(ITEMS_PER_PAGE).fill(null));
+                  pages.push(new Array(ITEMS_PER_PAGE).fill({ isEmpty: true }));
                   return pages;
               }
 
               for (let i = 0; i < items.length; i += ITEMS_PER_PAGE) {
                   const chunk = items.slice(i, i + ITEMS_PER_PAGE);
-                  // Se o chunk for menor que 10, completa com null
+                  // Preenche com objetos "vazios" para manter a altura da página estável
                   while (chunk.length < ITEMS_PER_PAGE) {
-                      chunk.push(null);
+                      chunk.push({ isEmpty: true });
                   }
                   pages.push(chunk);
               }
@@ -568,7 +581,7 @@
 
                 <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 relative scrollbar-hide">
                    
-                   {/* Layout de Impressão - PROTOCOLO COM GRADE FIXA */}
+                   {/* Layout de Impressão - PROTOCOLO COM GRADE FIXA E ROBUSTA */}
                    <div id="print-section" className="hidden">
                        {printPages.map((pageItems, pageIndex) => (
                            <div key={pageIndex} className="print-page">
@@ -603,7 +616,7 @@
                                        <tbody>
                                            {pageItems.map((d, i) => (
                                                <tr key={i} className="data-row">
-                                                   {d ? (
+                                                   {!d.isEmpty ? (
                                                        <>
                                                            <td>
                                                                <strong>{d.data}</strong><br/>
@@ -632,7 +645,7 @@
                                                            </td>
                                                        </>
                                                    ) : (
-                                                       // Linha Vazia (Padding)
+                                                       // Linha Vazia (Padding) - Agora com células explícitas
                                                        <>
                                                            <td>&nbsp;</td>
                                                            <td></td>
@@ -650,7 +663,7 @@
                                </div>
 
                                {/* Rodapé da Página */}
-                               <div className="page-footer flex justify-between uppercase">
+                               <div className="page-footer">
                                    <span>Controle Logístico Interno</span>
                                    <span>Página {pageIndex + 1} de {printPages.length}</span>
                                    <span>Impresso em: {new Date().toLocaleString('pt-BR')}</span>
@@ -661,7 +674,7 @@
 
                    {/* Dashboard Tab */}
                    {activeTab === 'dashboard' && (
-                       <div className="space-y-6 animate-in max-w-7xl mx-auto">
+                       <div className="space-y-6 animate-in max-w-7xl mx-auto no-print">
                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
                                    <div className="flex items-center gap-3 mb-2">
@@ -726,10 +739,10 @@
 
                    {/* List Tab */}
                    {activeTab === 'list' && (
-                       <div className="space-y-4 animate-in max-w-7xl mx-auto">
+                       <div className="space-y-4 animate-in max-w-7xl mx-auto no-print">
                            
                            {/* Filter Bar Moderna */}
-                           <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-wrap gap-4 items-center justify-between no-print sticky top-0 z-10">
+                           <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-wrap gap-4 items-center justify-between sticky top-0 z-10">
                                <div className="flex items-center gap-4">
                                    
                                    {/* Botão de Controle Principal */}
@@ -897,7 +910,7 @@
 
               {/* MODAL NOVA ENTREGA */}
               {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in no-print">
                   <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] ring-1 ring-white/10">
                     <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
                       <div>
@@ -997,7 +1010,7 @@
 
               {/* MODAL IMPORTAÇÃO SIMPLIFICADO */}
               {isImportModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in no-print">
                   <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl h-[70vh] flex flex-col overflow-hidden">
                       <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                           <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><FileSpreadsheet className="text-emerald-600"/> Importação em Massa</h3>
@@ -1032,6 +1045,7 @@
     </script>
 </body>
 </html>
+
 
 
 
