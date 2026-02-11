@@ -28,14 +28,14 @@
         .season-btn:hover { background-color: rgba(255,255,255,0.05); }
         .season-btn.active { background-color: rgba(255,255,255,0.1); border-left-color: #60a5fa; color: white; font-weight: 600; }
 
-        /* --- ESTILO DE IMPRESSÃO PAISAGEM (A4 DEITADO) - CORRIGIDO V15 --- */
+        /* --- ESTILO DE IMPRESSÃO PAISAGEM (A4 DEITADO) - CORREÇÃO DEFINITIVA V16 --- */
         @media print {
             @page { 
                 size: A4 landscape;
-                margin: 0mm; /* Controle total da margem via CSS */
+                margin: 0mm; 
             }
             
-            /* Reset Global para Impressão */
+            /* 1. Reseta o layout global */
             html, body {
                 width: 100%;
                 height: 100%;
@@ -45,42 +45,44 @@
                 overflow: visible !important;
             }
 
-            /* Esconde explicitamente tudo que não é o relatório */
+            /* 2. Oculta TUDO por padrão usando visibility (não display none, pois mata os filhos) */
             body * { 
                 visibility: hidden; 
             }
-            
-            #root, main, aside, header, .no-print {
-                display: none !important; 
+
+            /* 3. Oculta explicitamente menus e barras para não ocuparem espaço */
+            aside, header, .no-print {
+                display: none !important;
             }
             
-            /* Traz o relatório para frente e o posiciona no topo */
+            /* 4. Traz o relatório de volta à vida */
             #print-section, #print-section * { 
-                visibility: visible; 
+                visibility: visible !important; 
             }
             
+            /* 5. Posiciona o relatório no topo absoluto da página */
             #print-section { 
                 display: block !important; 
-                position: absolute; /* Essencial para sobrepor o layout */
+                position: absolute;
                 left: 0; 
                 top: 0; 
                 width: 100%; 
                 margin: 0; 
                 padding: 0;
                 background: white;
-                z-index: 9999; /* Garante que fique por cima de tudo */
+                z-index: 9999; /* Garante prioridade máxima */
             }
             
             /* Container da Página A4 Paisagem */
             .print-page {
-                width: 297mm; /* Largura A4 Paisagem */
-                height: 209mm; /* Altura A4 Paisagem */
+                width: 297mm;
+                height: 209mm;
                 page-break-after: always;
                 break-after: page;
                 position: relative;
                 display: flex;
                 flex-direction: column;
-                padding: 10mm; /* Margem interna */
+                padding: 10mm;
                 box-sizing: border-box;
                 background: white;
             }
